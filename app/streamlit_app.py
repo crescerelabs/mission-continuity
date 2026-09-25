@@ -29,7 +29,8 @@ from mission_continuity.kernel import load_kernel  # noqa: E402
 from mission_continuity.paths import REPLAYS, RUNS, TRACE_DIR  # noqa: E402
 from mission_continuity.tools import TOOL_SPECS  # noqa: E402
 
-st.set_page_config(page_title="Mission Continuity", layout="wide")
+st.set_page_config(page_title="Mission Continuity", layout="wide",
+                   initial_sidebar_state="collapsed" if st.query_params.get("screen") else "auto")
 
 OPERATOR, AGENT, TOOL, POLICY, APP, GOV = (":blue[**OPERATOR**]", ":orange[**AGENT**]", ":gray[**TOOL**]",
                                           ":violet[**MEMORY POLICY**]", ":red[**APP**]", ":green[**GOVERNOR**]")
@@ -95,6 +96,10 @@ def gov_index(events):
 
 # ------------------------------------------------------------------ sidebar
 kernel = load_kernel()
+# Read-only URL parameters for direct links and screenshots, e.g.
+# ?screen=compaction&bundle=E1-governed&pair=E1-baseline&cmp=cmp-1&upto=12
+QP = {k: st.query_params.get(k) for k in ("screen", "bundle", "pair", "cmp", "upto")}
+QP = {k: v for k, v in QP.items() if v}
 st.sidebar.title("Mission Continuity")
 mode = st.sidebar.radio("Mode", ["Replay", "Live"], horizontal=True)
 src = None
@@ -124,7 +129,7 @@ else:
     if bundles:
         names = [b.label for b in bundles]
         import os
-        want = os.path.basename(os.environ.get("MC_REPLAY_BUNDLE", "").rstrip("/")) or "E1-governed"
+        want = QP.get("bundle") or os.path.basename(os.environ.get("MC_REPLAY_BUNDLE", "").rstrip("/")) or "E1-governed"
         default = next((i for i, n in enumerate(names) if n == want), 0)
         src = bundles[st.sidebar.selectbox("Recorded run (replay bundle)", range(len(names)), index=default,
                                            format_func=lambda i: names[i])]
@@ -143,7 +148,8 @@ if src is not None:
     st.sidebar.caption(f"{meta.get('mode')} · {meta.get('arm')} · outcome **{meta.get('outcome')}** · "
                        f"fault {meta.get('fault_injection')}")
     if src.replay and len(steps) > 1:
-        upto = st.sidebar.slider("Replay up to model request", min(steps), max(steps), max(steps))
+        qup = int(QP["upto"]) if QP.get("upto", "").isdigit() else max(steps)
+        upto = st.sidebar.slider("Replay up to model request", min(steps), max(steps), min(max(qup, min(steps)), max(steps)))
     else:
         upto = max(steps)
     comps_all = src.jl("compactions.jsonl")
@@ -153,10 +159,9 @@ if src is not None:
 st.sidebar.divider()
 st.sidebar.markdown(f"{OPERATOR} {AGENT} {TOOL}  \n{POLICY} {APP} {GOV}")
 
-tabs = st.tabs(["Mission", "Investigation", "Compaction", "Report", "Comparison"])
 
 # ------------------------------------------------------------------ Mission
-with tabs[0]:
+def render_mission():
     st.header("Perpetuity & Co. · The Archive of Everything")
     st.caption(dataset.data()["vendor"]["tagline"] + " (All data is synthetic.)")
     c1, c2 = st.columns([3, 2])
@@ -203,7 +208,7 @@ with tabs[0]:
                          "Governor target": tgt, "in declared scope": tgt in scope,
                          "Governor on dispatch": ("flags (out of scope)" if prohibited and tgt not in scope else
                                                   "records, no flag (scope is per system)" if prohibited else "records")})
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True, height=36 * (len(rows) + 1) + 4)
         st.caption("Sentience Governor records and flags; it never blocks. Refusals come only from this "
                    "application's mission guard, and only in the governed configuration.")
 
@@ -286,7 +291,7 @@ def investigation(s: Source, upto: int):
                    f"{sum(1 for t in tools if t['tool_call_id'] in asserted)}/{len(tools)} tool calls joined")
 
 
-with tabs[1]:
+def render_investigation():
     if src is None:
         st.info("Select a run.")
     elif mode == "Live" and src.j("run.json", {}).get("outcome") == "running":
@@ -323,7 +328,7 @@ def compaction_view(s: Source, c: dict):
     st.caption(f"{c['messages_before']} messages leaving the agent's view, including {len(items)} tool results. "
                f"Withheld values: {', '.join(c.get('withheld') or []) or 'none'} (shown as <withheld:…>, never the value).")
     if items:
-        st.dataframe(pd.DataFrame(items), hide_index=True, use_container_width=True, height=200)
+        st.dataframe(pd.DataFrame(items), hide_index=True, use_container_width=True, height=min(36 * (len(items) + 1) + 4, 900))
 
     st.markdown(f"#### 2 · What the summarizer proposed {AGENT}")
     st.markdown(md(c["summary_text"]) or "_(empty)_")
@@ -341,7 +346,7 @@ def compaction_view(s: Source, c: dict):
         st.dataframe(pd.DataFrame([{"entry": d["entry_id"], "rule": d["rule"],
                                     "Governor recorded this call": d.get("governor_corroborated"),
                                     "text": mem.get(d["entry_id"], {}).get("text", "")[:160]} for d in must]),
-                     hide_index=True, use_container_width=True, height=240)
+                     hide_index=True, use_container_width=True, height=min(36 * (len(must) + 1) + 4, 1100))
         st.caption("MUST_NOT_PERSIST: " + (", ".join(sorted(set(c.get('withheld') or []))) or "none in this window") +
                    " withheld from memory, checkpoints and saved transcripts.")
         st.markdown("#### 4 · Still stored, no longer shown to the agent")
@@ -383,7 +388,7 @@ def compaction_view(s: Source, c: dict):
                f"tokens (Governor session {str(summ.get('session_id', ''))[:8]}).")
 
 
-with tabs[2]:
+def render_compaction():
     if src is None:
         st.info("Select a run.")
     else:
@@ -391,10 +396,14 @@ with tabs[2]:
         if not comps:
             st.info("No compaction has happened yet in this run.")
         else:
-            pick = st.selectbox("Compaction", [c["compaction_id"] for c in comps])
+            ids = [c["compaction_id"] for c in comps]
+            want = QP.get("cmp")
+            pick = st.selectbox("Compaction", ids, index=ids.index(want) if want in ids else 0)
             c = next(x for x in comps if x["compaction_id"] == pick)
             others = [b for b in (replay_sources() if src.replay else live_sources()) if b.label != src.label]
-            pair = st.selectbox("Compare side by side with", ["(none)"] + [b.label for b in others])
+            opts = ["(none)"] + [b.label for b in others]
+            pair = st.selectbox("Compare side by side with", opts,
+                                index=opts.index(QP.get("pair")) if QP.get("pair") in opts else 0)
             if pair == "(none)":
                 compaction_view(src, c)
             else:
@@ -413,7 +422,7 @@ with tabs[2]:
 
 
 # ------------------------------------------------------------------ Report
-with tabs[3]:
+def render_report():
     if src is None:
         st.info("Select a run.")
     else:
@@ -456,7 +465,7 @@ with tabs[3]:
 
 
 # ------------------------------------------------------------------ Comparison
-with tabs[4]:
+def render_comparison():
     srcs = replay_sources() if mode == "Replay" else live_sources()
     rows = []
     for s in srcs:
@@ -484,11 +493,37 @@ with tabs[4]:
         st.info("No experimental runs available in this mode.")
     else:
         df = pd.DataFrame(rows)
-        st.subheader("Natural runs (no fault injection)")
-        st.dataframe(df[df["kind"] == "natural"], hide_index=True, use_container_width=True)
-        st.subheader(":red[Induced omission runs (FI-1: the summarizer's T1 correction deliberately removed)]")
-        st.dataframe(df[df["kind"] == "induced"], hide_index=True, use_container_width=True)
-        st.caption("Two continuity architectures compared on the same mission, model, data and trigger; one run "
-                   "per configuration, so this is a demonstration, not a statistical result. Governor records and "
+        task_cols = ["run", "arm", "architecture", "score /5", "R1", "R2", "R3", "R4", "R5", "compactions",
+                     "reduction % (same request)", "facts missing after compaction", "Kernel terms missing"]
+        auth_cols = ["run", "prohibited attempts", "Governor flagged", "Governor recorded, no flag",
+                     "simulated effects", "app guard denials", "repeated retrievals",
+                     "input tokens (all sessions)", "summarizer tokens", "est. $"]
+        for kind, title in (("natural", "Natural runs (no fault injection)"),
+                            ("induced", ":red[Induced omission runs (FI-1: the summarizer's T1 correction deliberately removed)]")):
+            part = df[df["kind"] == kind]
+            st.subheader(title)
+            st.markdown("**Task score, context reduction and retention**")
+            st.dataframe(part[task_cols], hide_index=True, use_container_width=True, height=36 * (len(part) + 1) + 4)
+            st.markdown(f"**Authorization behavior ({GOV} records vs {APP} outcomes) and cost**")
+            st.dataframe(part[auth_cols], hide_index=True, use_container_width=True, height=36 * (len(part) + 1) + 4)
+        st.caption("Two continuity architectures compared on the same mission, model, data and trigger. E0, E1 and E2 "
+                   "are the preregistered runs (one per configuration); E1x rows are exploratory replications added "
+                   "afterwards. A handful of runs each: a demonstration, not a statistical result. Governor records and "
                    "flags; guard denials are the application's, counted separately from attempts. Calibration "
                    "did not meet the preregistered A2 ratio or the floor check (see README).")
+
+
+if QP.get("screen") and src is not None and src.replay:
+    _v = verified(src.label, (REPLAYS / src.label / "manifest.json").stat().st_mtime)
+    st.success(f"Replay of recorded run **{src.label}** · artifacts verified ({_v['files']} files, hashes match)"
+               if _v["ok"] else f"Bundle {src.label} failed verification")
+
+VIEWS = {"mission": render_mission, "investigation": render_investigation, "compaction": render_compaction,
+         "report": render_report, "comparison": render_comparison}
+if QP.get("screen") in VIEWS:
+    VIEWS[QP["screen"]]()
+else:
+    tabs = st.tabs(["Mission", "Investigation", "Compaction", "Report", "Comparison"])
+    for tab, fn in zip(tabs, VIEWS.values()):
+        with tab:
+            fn()
