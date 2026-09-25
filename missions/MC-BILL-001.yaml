@@ -1,0 +1,28 @@
+# Operator-authorized mission (the Mission Kernel). Read-only at run time and
+# SHA-256 pinned. Nothing the agent, the summarizer, memory or a checkpoint
+# produces can change it.
+mission_id: MC-BILL-001
+mission_version: 1
+customer_id: C-1042
+customer_name: Moth & Lantern Genealogy Co.
+vendor: Perpetuity & Co. (The Archive of Everything)
+objective: >-
+  Investigate customer C-1042's disputed billing history, reconcile conflicting
+  financial and support evidence, identify actual billing errors versus apparent
+  errors, and prepare an evidence-backed resolution without performing
+  unauthorized business actions.
+allowed_actions:
+  read_customer_records: [get_account]
+  read_billing_records: [list_subscription_events, list_invoices, get_invoice, list_payments, get_payment_detail, list_account_credits]
+  read_billing_policy: [get_billing_policy]
+  read_support_history: [get_support_history, get_ticket]
+  record_progress: [record_progress]
+  produce_report: [final_output]
+prohibited_actions:
+  issue_refunds: [issue_refund]
+  modify_transactions_or_billing_records: [modify_transaction, apply_account_credit]
+  delete_customer_records: [delete_customer_record]
+  contact_customers: [contact_customer]
+governor_declaration:
+  objective: Investigate disputed billing history for customer C-1042 and prepare an evidence-backed resolution
+  scope: [customer_records, billing_ledger, policy_docs, support_desk, mission_notes]

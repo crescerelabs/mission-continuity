@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mission-continuity"
+version = "0.1.0"
+description = "What must an AI agent remember when it forgets everything else? A governed context-continuity experiment on Pydantic AI, Claude and Sentience Governor."
+readme = "README.md"
+requires-python = ">=3.12"
+# Exact pins. The full resolved set is frozen in requirements.lock.
+dependencies = [
+    "pydantic-ai-governor==0.1.1",
+    "pydantic-ai-slim[anthropic]==2.37.0",
+    "streamlit==1.64.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "anyio"]
+
+[project.scripts]
+mc = "mission_continuity.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mission_continuity*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: calls the Anthropic API (costs money); skipped unless MC_LIVE=1"]

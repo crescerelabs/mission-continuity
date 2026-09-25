@@ -1,0 +1,31 @@
+# Retention policy P for the governed architecture. Deterministic. The model
+# may propose summaries and working notes; it never decides what the Kernel or
+# this policy requires to survive.
+policy_id: RET-1
+version: 1
+
+# MUST_PERSIST evidence pins: fields copied VERBATIM from the actual tool
+# return. A pin records what a tool returned, not an interpretation of it.
+evidence_pins:
+  get_payment_detail: [payment_id, record_type, capture_status, amount, created_at, settled_at, released_at, linked_payment_id, invoice_id, gateway_event]
+  get_invoice: [invoice_id, issued_at, period_start, period_end, lines, total, credits_applied, memo]
+  list_account_credits: [credit_id, amount, reason, source_ref, status, applied_to, owner_notified]
+  list_subscription_events: [event_id, date, type, detail, actor, source]
+  get_account: [customer_id, current_plan, auto_apply_credits, auto_apply_changed_ref, seats.user_id, seats.role, payment_method.last4]
+  get_ticket: [ticket_id, status, opened_at, subject, commitments_made, agent_conclusion, open_obligations]
+  get_billing_policy: [policy_id, version, rule]
+  # Bulk list views are not pinned: MAY_PERSIST, eligible for retirement.
+  list_invoices: []
+  list_payments: []
+  get_support_history: []
+
+# MUST_NOT_PERSIST: never written to memory, checkpoints, archives, ledgers,
+# reports or logs. Values under these keys, anywhere, are withheld.
+pii_fields: [name, email, owner_phone, phone, billing_address, card_number]
+pii_patterns:
+  email: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+  phone: '(?:\+?1[-. ]?)?\(?\d{3}\)?[-. ]\d{3}[-. ]\d{4}'
+  card_number: '\b\d{13,19}\b'
+
+# MAY_PERSIST exposure budget (entries shown to the model after compaction).
+may_budget: 10

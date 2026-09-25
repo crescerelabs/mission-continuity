@@ -1,0 +1,9 @@
+# Per-million-token prices for the model the agent and summarizer use.
+# Filled in from Anthropic's published pricing, with the source and the date
+# it was read. Until every field is set, mc refuses to start a paid run.
+# No prompt caching is configured, so base input and output rates apply.
+model: claude-sonnet-5
+input_per_mtok: 2.0
+output_per_mtok: 10.0
+source: https://platform.claude.com/docs/en/about-claude/pricing (Model pricing table, Claude Sonnet 5, footnote 3)
+retrieved: 2026-09-25
