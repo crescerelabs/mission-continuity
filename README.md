@@ -96,6 +96,15 @@ RawTree's own SQL then answers three questions (`sql/rawtree/`):
 
 `mc rawtree reconcile` checks RawTree's answers against `experiment/results_summary.json` and `experiment/exploratory_summary.json`: row counts, and per-run score, tokens, compactions and savings. The genuine query outputs and reconciliation inputs are saved in `experiment/rawtree/`. RawTree is optional: without `RAWTREE_API_KEY` and `RAWTREE_DATABASE` (see `.env.example`), the console and replay work exactly as before.
 
+## Watch Replay: visual reconstruction (optional, in progress)
+
+`mc reconstruct` builds an **AI-generated visual reconstruction** of any recorded run. The timeline, every caption and every number come from the run's hash-verified replay bundle. Scenes are chosen by what that run actually recorded: mission declared, a key payment record retrieved, the first compaction with what was missing afterwards, and then either the first prohibited action or the returned report. A scene is never invented to match another run. Footage for each scene is a short, silent, text-free clip from FLUX 3 (Black Forest Labs) and is illustrative only. A label on every frame says so, and the console lists each scene's source records (file and line, event or tool-call ID, row SHA-256).
+
+- `mc reconstruct scenes <run>` prints the scenes; `mc reconstruct build <run> --placeholder` renders a local preview under `var/` with solid backgrounds; `mc reconstruct verify <run>` rebuilds every scene from the records and checks all hashes.
+- A published reconstruction (`reconstructions/<run>/`) requires an accepted FLUX 3 clip for every scene; the build refuses rather than fall back to placeholder footage.
+- **Status:** no FLUX 3 footage has been generated yet, so every run shows "Replay not yet generated." in the console. Generation needs `BFL_API_KEY` (see `.env.example`) and BFL credits; spend is capped at $10.
+- Reconstructions only read the bundles; they never change replays, results, Governor traces or RawTree.
+
 ## How to demo
 
 ```bash

@@ -235,6 +235,57 @@ def _cmd_rawtree(args) -> int:
     return 1
 
 
+def _cmd_reconstruct(args) -> int:
+    from mission_continuity import reconstruct
+    if args.action == "build":
+        r = reconstruct.render(args.label, placeholder=args.placeholder)
+        print(json.dumps({k: r[k] for k in ("out_dir", "placeholder", "duration_s", "video_sha256", "video_bytes", "timeline")}, indent=1))
+        return 0
+    if args.action == "verify":
+        r = reconstruct.verify(args.label, placeholder=args.placeholder)
+        for k, v in r["checks"].items():
+            print(f"{'PASS' if v else 'FAIL'} {k}")
+        print("RECONSTRUCTION", "PASS" if r["ok"] else "FAIL")
+        return 0 if r["ok"] else 4
+    if args.action == "scenes":
+        for s in reconstruct.build_scenes(args.label)["scenes"]:
+            print(f"{s['scene_id']} {s['kind']:<10} {s.get('offset') or '':<7} {s['caption']}")
+        return 0
+    from mission_continuity import bfl
+    if args.action == "bfl-check":
+        c = bfl.Client()
+        credits = c.credits()
+        print(f"BFL key: set (not shown); credits: {credits:g} (= ${credits * bfl.CREDIT_USD:.2f}); "
+              f"ledger spend so far: ${bfl.spent():.2f} of ${bfl.CAP_USD:.2f} cap")
+        return 0
+    if args.action in ("draft", "accept"):
+        if not args.scene:
+            print("scene id required (e.g. S4)", file=sys.stderr)
+            return 1
+        d = reconstruct.RECON / args.label
+        fp = d / "footage.json"
+        footage = json.loads(fp.read_text()) if fp.exists() else {}
+        if args.action == "accept":
+            footage[args.scene]["accepted"] = True
+            fp.write_text(json.dumps(footage, indent=1))
+            print(f"accepted {args.label} {args.scene}")
+            return 0
+        scene = next(s for s in reconstruct.build_scenes(args.label)["scenes"] if s["scene_id"] == args.scene)
+        payload = {"mode": "t2v", "prompt": scene["prompt"], "aspect_ratio": "16:9", "duration": reconstruct.SCENE_S,
+                   "resolution": "hd", "generate_audio": False, "draft": True, "safety_tolerance": 2}
+        clip = d / "clips" / f"{args.scene}.mp4"
+        prov = bfl.Client().generate_video(payload, clip, tag=f"{args.label}/{args.scene}/draft")
+        footage[args.scene] = {"scene_id": args.scene, "model": "FLUX 3 (/v1/flux-3-video)", "request": payload,
+                               "clip": f"clips/{args.scene}.mp4", "clip_sha256": reconstruct._sha_file(clip),
+                               "accepted": False, **prov}
+        fp.write_text(json.dumps(footage, indent=1))
+        print(json.dumps({k: footage[args.scene][k] for k in ("task_id", "status", "latency_s", "cost_usd_reported",
+                                                               "estimate_usd", "clip", "clip_sha256")}, indent=1))
+        print(f"ledger spend: ${bfl.spent():.2f} of ${bfl.CAP_USD:.2f}")
+        return 0
+    return 1
+
+
 def _cmd_evaluate(args) -> int:
     from mission_continuity.evaluate import evaluate
     r = evaluate(args.label)
@@ -279,6 +330,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("action", choices=["export", "check", "push", "push-run", "verify-run", "query", "reconcile"])
     p.add_argument("name", nargs="?", default="q0_reconcile")
     p.set_defaults(func=_cmd_rawtree)
+
+    p = sub.add_parser("reconstruct", help="Optional: AI-generated visual reconstruction (Watch Replay) of a recorded run")
+    p.add_argument("action", choices=["scenes", "build", "verify", "bfl-check", "draft", "accept"])
+    p.add_argument("label", nargs="?", default="E1-baseline")
+    p.add_argument("scene", nargs="?")
+    p.add_argument("--placeholder", action="store_true", help="solid backgrounds; output under var/")
+    p.set_defaults(func=_cmd_reconstruct)
 
     p = sub.add_parser("evaluate", help="Evaluate one run (writes results.json)")
     p.add_argument("label")
