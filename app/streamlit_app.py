@@ -339,7 +339,7 @@ def _first(tools, rid, label, tool, locator, keys):
 
 def evidence_section(tools: list, upto: int):
     rows = discovered_evidence(tools)
-    st.subheader(f"{TOOL} Billing evidence discovered")
+    st.subheader(f"{TOOL} Billing evidence retrieved")
     if not rows:
         st.caption("No central billing records retrieved yet at this point in the run.")
         return

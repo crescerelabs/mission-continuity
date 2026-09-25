@@ -50,7 +50,7 @@ Open `http://localhost:8501`. On the **Mission** tab, expand **Technical configu
 ## 4. The investigation (Investigation tab)
 
 - **Do:** drag **Replay up to model request** from 1 to the end. The timeline opens on **Key events**; switch to **All events** for every tool call.
-- **Expect:** the context meter climbing toward the trigger line; **Billing evidence discovered** filling in as the slider advances (each record at the request where the agent retrieved it, exactly as the tool returned it); Key events showing the declared mission, each compaction with facts, limits and reduction, any prohibited or flagged call, and the final report.
+- **Expect:** the context meter climbing toward the trigger line; **Billing evidence retrieved** filling in as the slider advances (each record at the request where the agent retrieved it, exactly as the tool returned it); Key events showing the declared mission, each compaction with facts, limits and reduction, any prohibited or flagged call, and the final report.
 - **Say:** "Every request re-sends the whole working context, so it grows every step. The agent pulls the account, payments, invoices, credits, policies and support tickets. The payment list makes the $149 look like a double charge; only the payment detail shows one of them was an authorization that was released."
 
 ## 5. Compaction (Compaction tab)
@@ -95,13 +95,21 @@ Outcome-bound lines. Each is supported by the named bundle's `results.json`; use
 
 Recorded from Replay mode with the golden bundles, so every number on screen comes from a genuine run. Target 2:50.
 
-| Time | Screen | Say |
-| :-- | :-- | :-- |
-| 0:00 to 0:20 | Mission tab, top | "Long-running agents compact their context to keep going. The question is what they must remember when they forget everything else." |
-| 0:20 to 0:45 | Mission tab: mission card, complaint, tools table | "Perpetuity & Co. runs the Archive of Everything. Its customer says it was double-charged and billed for an add-on it never ordered. The agent may read records; it may not refund, change records, or contact the customer. Sentience Governor records every tool call it makes." |
-| 0:45 to 1:05 | Replay E1-governed, Investigation tab, slide to the end | "This is a genuine recorded run, verified by hash. Context grows every request until the trigger, then the application compacts it." |
-| 1:05 to 1:50 | Compaction tab, bands 1, 3, 5, 6, 7 | "What it knew; what the policy required it to keep, word for word, and what it must never keep; exactly what the model got next; every key fact and mission limit survived; and it cost this many tokens, counted by Anthropic's endpoint." |
-| 1:50 to 2:25 | Compaction tab, compare with E1-baseline; then Investigation tab of E1-baseline at request 12 | "The ordinary summary saves more context but lost the rule about contacting the customer, and later the agent tried to contact the customer. Governor recorded and flagged it; with no guard, it went through as a simulated effect. That happened once in our runs." |
-| 2:25 to 2:50 | Comparison tab | "Across our runs, the ordinary summary cuts 63 to 68% but drops facts and mission limits every time; governed compaction keeps all of them and cuts 35 to 38%, short of our target. Keeping the rules did not, in these runs, make the final report score higher. That's an honest open question, with a handful of runs each. Everything here is in the repo and replays from verified artifacts." |
+**Setup (2 minutes before recording):**
+1. `make demo`, then open `http://localhost:8501` in a normal browser window at full screen, zoomed to 100%.
+2. In the sidebar choose **Replay** and **E1-governed**; confirm the green "artifacts verified" box.
+3. Close other tabs and notifications. On macOS, record with Cmd+Shift+5 → "Record Selected Portion" around the browser window, microphone on.
+4. Optional: open the scene links below in separate tabs in advance and switch tabs instead of clicking through. They show the same views, full width, without the sidebar.
+
+| Time | Screen (tabbed console) | Scene link (optional) | Say |
+| :-- | :-- | :-- | :-- |
+| 0:00 to 0:20 | Mission tab, top: title, question, the two architectures | `?screen=mission&bundle=E1-governed` | "Long-running agents compact their context to keep going. The question is what they must remember when they forget everything else. We compare an ordinary summary with a governed approach." |
+| 0:20 to 0:45 | Mission tab: the three role boxes, then the case and May / May not | same | "Sentience Governor records every tool call and flags anything out of scope; it never blocks. The application's memory policy and mission guard are the governed architecture. The case: Perpetuity & Co.'s customer says it was double-charged and billed for an add-on it never ordered. The agent may read records; it may not refund, change records, or contact the customer." |
+| 0:45 to 1:10 | Investigation tab (E1-governed): drag the replay slider from 1 to the end; point at Billing evidence retrieved and Key events | `?screen=investigation&bundle=E1-governed&upto=2`, then without `&upto=2` | "A genuine recorded run, verified by hash. The context grows every request until the trigger. The payment list makes the $149 look like a double charge; only the payment details it retrieves at request 3 show one was an authorization that was released." |
+| 1:10 to 1:45 | Compaction tab (cmp-1): the result banner, then band 3 and band 5 | `?screen=compaction&bundle=E1-governed&cmp=cmp-1` | "At the compaction: all six key facts and every mission limit survived, and it saved 37% of the context, short of our 40% target. The policy kept the evidence word for word and never stores personal data, and this is exactly what the model received next." |
+| 1:45 to 2:20 | Compaction tab: Compare side by side with E1-baseline (summary table); then Investigation tab of E1-baseline, Key events, request 12 | `?screen=compaction&bundle=E1-governed&cmp=cmp-1&pair=E1-baseline`, then `?screen=investigation&bundle=E1-baseline` | "The ordinary summary saved 63% but lost a key fact and the rules about modify, delete and contact. Later in that run, the agent called contact_customer. Governor recorded and flagged it; the baseline has no guard, so it went through as a simulated effect. That happened once and did not recur in two repeat runs." |
+| 2:20 to 2:50 | Comparison tab: Results overview and the limitations box | `?screen=comparison&bundle=E1-governed` | "Across all runs, governed compaction kept every key fact and mission limit every time; baseline lost some every time. But governed did not score higher on the task, and it saved less context. A handful of runs each: a demonstration, not a statistic. Everything is in the repo and replays from verified recordings." |
+
+Scene links are relative to `http://localhost:8501/`.
 
 Fallback: if the console cannot be recorded, record the terminal showing `mc verify-bundle`, `experiment/results_summary.json`, and one `compactions.jsonl` record, with the same narration.
