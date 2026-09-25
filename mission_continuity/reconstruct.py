@@ -1,4 +1,12 @@
-"""Visual reconstruction ("Watch Replay") of a recorded run.
+"""Watch Replay: recorded-session replay of a run (amendment A6).
+
+Published replays are rendered by session_replay.py entirely from the run's
+records (terminal-style, no generated footage). The earlier scene and FLUX 3
+footage pipeline below (build_scenes, overlay/segment helpers, bfl drafts) is
+retained as experimental material; its clips are not used by the replay.
+
+Original design notes, kept for the experimental pipeline:
+Visual reconstruction ("Watch Replay") of a recorded run.
 
 An AI-generated visual reconstruction of recorded execution, parameterized by
 run label. The execution timeline, every caption and every number come from the
@@ -339,84 +347,67 @@ def _segment(bg: Optional[Path], png: Path, secs: int, out: Path):
 
 
 def render(label: str, placeholder: bool = False) -> dict:
-    spec = build_scenes(label)
-    leaks = leak_check(spec)
+    """Render the recorded-session replay (amendment A6): terminal-style, entirely from the records.
+
+    Generated BFL clips under reconstructions/<label>/clips/ are experimental material:
+    they are not read, used or modified here.
+    """
+    from mission_continuity import resummarize, session_replay
+    liquid = None
+    if resummarize.available(label, "cmp-1"):
+        if not resummarize.verify(label, "cmp-1")["ok"]:
+            raise RuntimeError("offline Liquid result failed verification; refusing to include the epilogue")
+        liquid = resummarize.available(label, "cmp-1")
+    tl = session_replay.build_timeline(label, liquid)
+    leaks = leak_check(tl)
     if leaks:
-        raise RuntimeError(f"refused: {len(leaks)} personal-data value(s) in scene text")
+        raise RuntimeError(f"refused: {len(leaks)} personal-data value(s) in the timeline")
     out_dir = (PLACEHOLDER_ROOT if placeholder else RECON) / label
-    clips = RECON / label / "clips"
-    footage = {}
-    if not placeholder:
-        fp = RECON / label / "footage.json"
-        footage = json.loads(fp.read_text()) if fp.exists() else {}
-        # A published reconstruction never silently falls back to placeholder footage.
-        pending = [s["scene_id"] for s in spec["scenes"] if s["generated"] and not (
-            (clips / f"{s['scene_id']}.mp4").exists() and footage.get(s["scene_id"], {}).get("accepted")
-            and footage[s["scene_id"]].get("clip_sha256") == _sha_file(clips / f"{s['scene_id']}.mp4"))]
-        if pending:
-            raise RuntimeError(f"refused: scenes without an accepted generated clip: {', '.join(pending)} "
-                               f"(use --placeholder for a local preview under var/)")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    timeline, t, segs = [], 0, []
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        for s in spec["scenes"]:
-            secs = SCENE_S if s["generated"] else CARD_S
-            png = out_dir / "overlays" / f"{s['scene_id']}.png"
-            overlay_png(png, spec["label_text"], s["caption"], card=not s["generated"])
-            bg = None
-            src = "card" if not s["generated"] else "placeholder"
-            if s["generated"] and not placeholder:
-                clip = clips / f"{s['scene_id']}.mp4"
-                f = footage.get(s["scene_id"])
-                if clip.exists() and f and f.get("clip_sha256") == _sha_file(clip) and f.get("accepted"):
-                    bg, src = clip, "bfl"
-            seg = tmp / f"{len(segs):02d}_{s['scene_id']}.mp4"
-            _segment(bg, png, secs, seg)
-            segs.append(seg)
-            timeline.append({"scene_id": s["scene_id"], "start_s": t, "end_s": t + secs, "footage": src,
-                             "overlay_sha256": _sha_file(png)})
-            t += secs
-        lst = tmp / "list.txt"
-        lst.write_text("".join(f"file '{p}'\n" for p in segs))
-        video = out_dir / "replay.mp4"
-        _ffmpeg("-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", "-movflags", "+faststart", str(video))
-    (out_dir / "scenes.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
-    manifest = {"label": label, "version": VERSION, "placeholder": placeholder,
+    video = out_dir / "replay.mp4"
+    r = session_replay.render(tl, video)
+    stills = r.pop("_stills")
+    (out_dir / "timeline.json").write_text(json.dumps(tl, indent=1, ensure_ascii=False))
+    experimental = sorted(str(p.relative_to(out_dir)) for p in (out_dir / "clips").glob("*")) if (out_dir / "clips").exists() else []
+    manifest = {"label": label, "version": VERSION, "kind": "recorded_session_replay", "placeholder": placeholder,
+                "footage": "rendered from the record (no generated footage)",
                 "rendered_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "scenes_sha256": _sha_file(out_dir / "scenes.json"), "timeline": timeline,
-                "duration_s": t, "video": "replay.mp4", "video_sha256": _sha_file(video),
-                "video_bytes": video.stat().st_size}
+                "timeline_sha256": _sha_file(out_dir / "timeline.json"), **r,
+                "video": "replay.mp4", "video_sha256": _sha_file(video), "video_bytes": video.stat().st_size,
+                "experimental_material_not_used": experimental + (["footage.json"] if (out_dir / "footage.json").exists() else [])}
     (out_dir / "render.json").write_text(json.dumps(manifest, indent=1))
-    return {"out_dir": str(out_dir.relative_to(REPO)), **manifest}
+    return {"out_dir": str(out_dir.relative_to(REPO)), "stills": stills, **manifest}
 
 
 # ------------------------------------------------------------------ verify
 def verify(label: str, placeholder: bool = False) -> dict:
+    from mission_continuity import resummarize, session_replay
     out_dir = (PLACEHOLDER_ROOT if placeholder else RECON) / label
-    checks = {}
-    checks["bundle_verified"] = verify_bundle(REPLAYS / label)["ok"]
-    stored = json.loads((out_dir / "scenes.json").read_text())
-    rebuilt = build_scenes(label)
-    checks["scenes_rebuilt_from_records_match"] = stored == json.loads(json.dumps(rebuilt, ensure_ascii=False))
-    rows_ok = True
-    for s in stored["scenes"]:
-        for src in s["sources"]:
-            p = REPLAYS / label / src["file"]
+    checks = {"bundle_verified": verify_bundle(REPLAYS / label)["ok"]}
+    stored = json.loads((out_dir / "timeline.json").read_text())
+    liquid = resummarize.available(label, "cmp-1")
+    if liquid:
+        checks["liquid_result_verified"] = resummarize.verify(label, "cmp-1")["ok"]
+    rebuilt = session_replay.build_timeline(label, liquid)
+    checks["timeline_rebuilt_from_records_matches"] = stored == json.loads(json.dumps(rebuilt, ensure_ascii=False))
+    ok_rows = True
+    for ev in stored["events"]:
+        for src in ev["sources"]:
+            p = (REPLAYS / label / src["file"]) if not src["file"].startswith(("offline_resummaries/", "experiment/")) else REPO / src["file"]
             if "row_sha256" in src:
-                rows_ok &= _sha_text(_lines(p)[src["line"] - 1]) == src["row_sha256"]
+                ok_rows &= _sha_text(_lines(p)[src["line"] - 1]) == src["row_sha256"]
             if src.get("file_sha256"):
-                rows_ok &= _sha_file(p) == src["file_sha256"]
-    checks["source_rows_and_files_match"] = rows_ok
-    render_m = json.loads((out_dir / "render.json").read_text())
-    checks["scenes_json_hash_matches_render"] = _sha_file(out_dir / "scenes.json") == render_m["scenes_sha256"]
-    checks["video_hash_matches"] = _sha_file(out_dir / render_m["video"]) == render_m["video_sha256"]
+                ok_rows &= _sha_file(p) == src["file_sha256"]
+    checks["every_event_source_row_and_file_matches"] = ok_rows
+    checks["every_event_has_a_source"] = all(ev["sources"] for ev in stored["events"])
+    rj = json.loads((out_dir / "render.json").read_text())
+    checks["timeline_hash_matches_render"] = _sha_file(out_dir / "timeline.json") == rj["timeline_sha256"]
+    checks["video_hash_matches"] = _sha_file(out_dir / rj["video"]) == rj["video_sha256"]
     fp = RECON / label / "footage.json"
     if fp.exists() and not placeholder:
         footage = json.loads(fp.read_text())
-        checks["clip_hashes_match"] = all(_sha_file(RECON / label / "clips" / f"{sid}.mp4") == f["clip_sha256"]
-                                          for sid, f in footage.items() if f.get("clip_sha256"))
-    checks["no_personal_data"] = not leak_check(stored) and not (fp.exists() and leak_check(fp.read_text()))
+        checks["experimental_clips_unchanged"] = all(_sha_file(RECON / label / "clips" / f"{sid}.mp4") == f["clip_sha256"]
+                                                     for sid, f in footage.items() if f.get("clip_sha256"))
+    checks["no_personal_data"] = not leak_check(stored)
     return {"label": label, "ok": all(checks.values()), "checks": checks}
 
 
@@ -431,9 +422,7 @@ def available(label: str, allow_placeholder: bool = False) -> Optional[dict]:
         if placeholder and not allow_placeholder:
             break
         d = root / label
-        if (d / "render.json").exists() and (d / "replay.mp4").exists():
-            fp = RECON / label / "footage.json"
+        if (d / "render.json").exists() and (d / "replay.mp4").exists() and (d / "timeline.json").exists():
             return {"dir": d, "placeholder": placeholder, "render": json.loads((d / "render.json").read_text()),
-                    "scenes": json.loads((d / "scenes.json").read_text()),
-                    "footage": json.loads(fp.read_text()) if fp.exists() and not placeholder else {}}
+                    "timeline": json.loads((d / "timeline.json").read_text())}
     return None

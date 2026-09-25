@@ -119,14 +119,33 @@ Before any Liquid output is accepted, a control check must pass: the recorded Cl
 
 **Limitations.** This is one compaction with one sample per model, and the sampling settings differ (Claude used the provider default; Liquid used the model card's recommended low temperature with a fixed seed). Claude used tool-call structured output, while Liquid used grammar-constrained JSON. The result ranks neither model and says nothing about later agent behavior.
 
-## Watch Replay: visual reconstruction (optional, in progress)
+## Watch Replay: recorded-session replay
 
-`mc reconstruct` builds an **AI-generated visual reconstruction** of any recorded run. The timeline, every caption and every number come from the run's hash-verified replay bundle. Scenes are chosen by what that run actually recorded: mission declared, a key payment record retrieved, the first compaction with what was missing afterwards, and then either the first prohibited action or the returned report. A scene is never invented to match another run. Footage for each scene is a short, silent, text-free clip from FLUX 3 (Black Forest Labs) and is illustrative only. A label on every frame says so, and the console lists each scene's source records (file and line, event or tool-call ID, row SHA-256).
+**Watch Replay** plays a terminal-style visual recreation of a recorded agent session, driven entirely by the run's hash-verified replay bundle and its Governor trace. It is neither a screen recording nor generated footage. The session unfolds in recorded order:
+- the mission declared;
+- each model request with its measured input tokens;
+- each tool call with its Governor record;
+- tracked-fact sources lighting up as they are retrieved;
+- the compaction, with the same-request token drop and which facts and mission terms were present or missing in the next request (the mission's own "may not" wording is shown verbatim);
+- flagged actions, held on screen with the Governor finding (flagged, not blocked) and the recorded effect (simulated; no real customer was contacted);
+- the outcome.
 
-- `mc reconstruct scenes <run>` prints the scenes; `mc reconstruct build <run> --placeholder` renders a local preview under `var/` with solid backgrounds; `mc reconstruct verify <run>` rebuilds every scene from the records and checks all hashes.
-- A published reconstruction (`reconstructions/<run>/`) requires an accepted FLUX 3 clip for every scene; the build refuses rather than fall back to placeholder footage.
-- **Status:** no FLUX 3 footage has been generated yet, so every run shows "Replay not yet generated." in the console. Generation needs `BFL_API_KEY` (see `.env.example`) and BFL credits; spend is capped at $10.
-- Reconstructions only read the bundles; they never change replays, results, Governor traces or RawTree.
+Colors carry meaning, always alongside text labels:
+- green: confirmed or retained;
+- amber: compaction and warnings;
+- red: missing mission terms and flagged actions;
+- neutral: ordinary calls.
+
+Pacing is for viewing only; the clock shows recorded time.
+
+- **Where:** Watch Replay on the Mission, Investigation and Comparison tabs and in the sidebar; all open `?screen=replay&bundle=<run>`, with the player and every key event linked to its source rows. Runs without a replay show "Replay not yet generated."
+- **Build and check:**
+  - `mc reconstruct build <run>` writes `reconstructions/<run>/replay.mp4`, `timeline.json` and `render.json`.
+  - `mc reconstruct verify <run>` rebuilds the timeline from the records and checks every event's source row, the file hashes and the video hash.
+  - Replays exist for **E1-baseline** and **E1-governed**. Each shows only the events that run recorded: the governed replay has two compactions with the Kernel re-supplied and no prohibited action.
+- **The E1-baseline replay ends with a clearly separated offline epilogue:** the Liquid AI re-summarization (see above). It is labeled as not part of the recorded session.
+- **Earlier experiment:** generated FLUX 3 (Black Forest Labs) footage of an illustrated investigator was tried first and set aside, because a text-to-video scene has to invent a subject. The four draft clips, their provenance and the $1.20 spend record are kept locally as experimental material (gitignored, not committed) and are not used by the replay.
+- Replays only read the bundles; they never change replays, results, Governor traces or RawTree.
 
 ## How to demo
 

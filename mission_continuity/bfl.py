@@ -128,6 +128,7 @@ class Client:
                 dc.write_bytes(r.read())
             draft_cache = str(dc.relative_to(REPO))
         return {"task_id": task["id"], "status": res["status"], "latency_s": latency,
+                "bfl_reported_prompt": result.get("prompt"), "bfl_reported_seed": result.get("seed"),
                 "cost_usd_reported": entry["cost_usd"], "estimate_usd": est,
                 "draft_cache_local": draft_cache, "result_keys": sorted(result)}
 

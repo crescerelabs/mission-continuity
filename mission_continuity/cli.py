@@ -239,7 +239,8 @@ def _cmd_reconstruct(args) -> int:
     from mission_continuity import reconstruct
     if args.action == "build":
         r = reconstruct.render(args.label, placeholder=args.placeholder)
-        print(json.dumps({k: r[k] for k in ("out_dir", "placeholder", "duration_s", "video_sha256", "video_bytes", "timeline")}, indent=1))
+        print(json.dumps({k: r[k] for k in ("out_dir", "kind", "footage", "frames", "fps", "duration_s", "video_sha256",
+                                            "video_bytes", "experimental_material_not_used")}, indent=1))
         return 0
     if args.action == "verify":
         r = reconstruct.verify(args.label, placeholder=args.placeholder)
@@ -271,13 +272,37 @@ def _cmd_reconstruct(args) -> int:
             print(f"accepted {args.label} {args.scene}")
             return 0
         scene = next(s for s in reconstruct.build_scenes(args.label)["scenes"] if s["scene_id"] == args.scene)
+        if footage.get(args.scene, {}).get("accepted"):
+            print(f"{args.scene} is already accepted; not regenerating", file=sys.stderr)
+            return 1
         payload = {"mode": "t2v", "prompt": scene["prompt"], "aspect_ratio": "16:9", "duration": reconstruct.SCENE_S,
                    "resolution": "hd", "generate_audio": False, "draft": True, "safety_tolerance": 2}
+        reference = None
+        if args.reference:
+            # Style and continuity reference: the first frame of an accepted clip opens this clip (i2v).
+            ref = footage.get(args.reference) or {}
+            ref_clip = d / "clips" / f"{args.reference}.mp4"
+            if not (ref.get("accepted") and ref_clip.exists() and reconstruct._sha_file(ref_clip) == ref.get("clip_sha256")):
+                print(f"reference {args.reference} is not an accepted, hash-verified clip", file=sys.stderr)
+                return 1
+            import base64
+            import subprocess as sp
+            frame = d / "clips" / f"{args.reference}_frame0.png"
+            sp.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(ref_clip), "-frames:v", "1", str(frame)], check=True)
+            payload.update({"mode": "i2v", "keyframes": base64.b64encode(frame.read_bytes()).decode()})
+            reference = {"scene": args.reference, "clip_sha256": ref["clip_sha256"],
+                         "keyframe": f"clips/{frame.name}", "keyframe_sha256": reconstruct._sha_file(frame),
+                         "use": "opening frame (i2v keyframe) for style and continuity"}
         clip = d / "clips" / f"{args.scene}.mp4"
         prov = bfl.Client().generate_video(payload, clip, tag=f"{args.label}/{args.scene}/draft")
-        footage[args.scene] = {"scene_id": args.scene, "model": "FLUX 3 (/v1/flux-3-video)", "request": payload,
+        request = {k: v for k, v in payload.items() if k != "keyframes"}
+        if reference:
+            request["keyframes"] = "<first frame of " + reference["scene"] + ", sha256 " + reference["keyframe_sha256"] + ">"
+        footage[args.scene] = {"scene_id": args.scene, "model": "FLUX 3 (/v1/flux-3-video)", "request": request,
+                               "reference": reference,
                                "clip": f"clips/{args.scene}.mp4", "clip_sha256": reconstruct._sha_file(clip),
-                               "accepted": False, **prov}
+                               "accepted": False, **prov,
+                               "bfl_reported_prompt_matches_request": prov.get("bfl_reported_prompt") == payload["prompt"]}
         fp.write_text(json.dumps(footage, indent=1))
         print(json.dumps({k: footage[args.scene][k] for k in ("task_id", "status", "latency_s", "cost_usd_reported",
                                                                "estimate_usd", "clip", "clip_sha256")}, indent=1))
@@ -366,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("label", nargs="?", default="E1-baseline")
     p.add_argument("scene", nargs="?")
     p.add_argument("--placeholder", action="store_true", help="solid backgrounds; output under var/")
+    p.add_argument("--reference", help="accepted scene whose first frame opens this draft (style/continuity)")
     p.set_defaults(func=_cmd_reconstruct)
 
     p = sub.add_parser("resummarize", help="Optional: offline exploratory re-summarization of a recorded compaction (Liquid AI, local)")

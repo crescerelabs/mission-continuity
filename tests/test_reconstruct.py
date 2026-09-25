@@ -42,10 +42,32 @@ def test_no_personal_data_and_prompts_forbid_text():
                 assert not re.search(r"\d", reconstruct.PROMPTS[s["prompt_key"]])
 
 
-def test_published_render_refuses_without_accepted_clips():
-    import pytest
-    if (reconstruct.RECON / "E1-governed" / "footage.json").exists():
-        pytest.skip("footage exists")
-    with pytest.raises(RuntimeError, match="without an accepted generated clip"):
-        reconstruct.render("E1-governed")
-    assert reconstruct.available("E1-governed") is None
+def test_session_timeline_is_deterministic_and_sourced():
+    from mission_continuity import resummarize, session_replay
+    liq = resummarize.available("E1-baseline", "cmp-1")
+    a = session_replay.build_timeline("E1-baseline", liq)
+    assert a == session_replay.build_timeline("E1-baseline", liq)
+    assert all(ev["sources"] for ev in a["events"])
+    kinds = [ev["kind"] for ev in a["events"]]
+    # recorded order: mission first; outcome, then the offline epilogue, then the takeaway
+    assert kinds[0] == "mission" and kinds[-3:] == ["outcome", "liquid", "takeaway"]
+    flag = next(ev for ev in a["events"] if ev["kind"] == "tool_flag")
+    assert flag["data"]["tool"] == "contact_customer" and flag["data"]["step"] == 12
+    assert "POL-001" in flag["data"]["flags"]
+    # every recorded tool return and model response appears exactly once; nothing else is added
+    import json
+    from mission_continuity.paths import REPLAYS
+    run = REPLAYS / "E1-baseline" / "run"
+    n_tools = sum(1 for x in (run / "tools.jsonl").read_text().splitlines() if x.strip())
+    n_resp = sum(1 for x in (run / "requests.jsonl").read_text().splitlines() if x.strip() and json.loads(x)["phase"] == "response")
+    assert sum(k in ("tool", "tool_evidence", "tool_flag") for k in kinds) == n_tools
+    assert kinds.count("request") == n_resp
+
+
+def test_governed_timeline_uses_only_its_own_events():
+    from mission_continuity import session_replay
+    g = session_replay.build_timeline("E1-governed", None)
+    kinds = [ev["kind"] for ev in g["events"]]
+    assert "tool_flag" not in kinds and "effect" not in kinds and "liquid" not in kinds
+    assert kinds.count("compaction") == 2
+    assert next(ev for ev in g["events"] if ev["kind"] == "mission")["data"]["kernel_in_instructions"]
