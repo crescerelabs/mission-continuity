@@ -139,6 +139,77 @@ def _cmd_summarize(args) -> int:
     return 0
 
 
+def _cmd_rawtree(args) -> int:
+    from mission_continuity import rawtree
+    if args.action == "export":
+        out = rawtree.export()
+        print(json.dumps(out["summary"], indent=1))
+        return 0
+    client = rawtree.Client()
+    if args.action == "check":
+        r = rawtree.check(client)
+        print(json.dumps(r, indent=1))
+        return 0 if r["database_ok"] else 3
+    if args.action == "push":
+        r = rawtree.check(client)
+        if not r["database_ok"]:
+            print(f"REFUSED: requests resolve to database {r['current_database']!r}, not {client.database!r}")
+            return 3
+        taken = [t for t, exists in r["own_tables_exist"].items() if exists]
+        if taken and not args.name == "allow-existing":
+            print(f"REFUSED: table(s) already exist in {client.database!r}: {taken}")
+            return 3
+        out = rawtree.export()
+        report = rawtree.push(client, out["per_bundle"])
+        (rawtree.OUT_DIR / "push_report.json").write_text(json.dumps(report, indent=1))
+        print(json.dumps({"database": client.database, "inserts": len(report),
+                          "rows_sent": sum(x["rows"] for x in report)}, indent=1))
+        return 0
+    if args.action == "query":
+        data = rawtree.run_sql(client, args.name)
+        (rawtree.OUT_DIR / f"{args.name}.result.json").write_text(json.dumps(data, indent=1))
+        rows = data.get("data", [])
+        if rows:
+            cols = list(rows[0])
+            print(" | ".join(cols))
+            for r in rows:
+                print(" | ".join(str(r[c]) for c in cols))
+        print(f"-- {data.get('rows')} rows from RawTree database {client.database!r}; statistics {data.get('statistics')}")
+        return 0
+    if args.action == "reconcile":
+        from mission_continuity.rawtree import EXPORT_VERSION  # noqa: F401
+        expected = json.loads((rawtree.OUT_DIR / "export_manifest.json").read_text())["row_counts"]
+        counts = {r["tbl"]: int(r["distinct_rows"]) for r in rawtree.run_sql(client, "q0_reconcile")["data"]}
+        ok = True
+        for t, n in expected.items():
+            good = counts.get(t) == n
+            ok &= good
+            print(f"{'PASS' if good else 'FAIL'} rows {t}: RawTree {counts.get(t)} vs export {n}")
+        local = {}
+        for f in ("results_summary.json", "exploratory_summary.json"):
+            for r in json.loads((REPO / "experiment" / f).read_text()):
+                local[r["label"]] = r
+        for r in rawtree.run_sql(client, "q3b_whole_run")["data"]:
+            L = local.get(r["run_id"])
+            checks = {"score": (int(r["score"]), L["score"]),
+                      "input_tokens": (int(r["input_tokens_all_sessions"]), L["input_tokens"]),
+                      "compactions": (int(r["compactions"]), L["compactions"]),
+                      "summarizer_tokens": (int(r["summarizer_tokens"]), L["summarizer_tokens"])}
+            for k, (a, b) in checks.items():
+                good = a == b
+                ok &= good
+                if not good:
+                    print(f"FAIL {r['run_id']} {k}: RawTree {a} vs summary {b}")
+            saved = [float(x) for x in str(r["saved_pct_each_compaction"]).split(", ") if x]
+            good = saved == [float(x) for x in L["reduction_pct"]]
+            ok &= good
+            print(f"{'PASS' if all(a == b for a, b in checks.values()) and good else 'FAIL'} {r['run_id']}: "
+                  f"score {r['score']}, input tokens {r['input_tokens_all_sessions']}, saved {saved}")
+        print("RECONCILIATION", "PASS" if ok else "FAIL")
+        return 0 if ok else 4
+    return 1
+
+
 def _cmd_evaluate(args) -> int:
     from mission_continuity.evaluate import evaluate
     r = evaluate(args.label)
@@ -178,6 +249,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("summarize", help="Write experiment/results_summary.json from evaluated runs")
     p.add_argument("labels", nargs="+")
     p.set_defaults(func=_cmd_summarize)
+
+    p = sub.add_parser("rawtree", help="Optional: export recorded evidence to RawTree and query it")
+    p.add_argument("action", choices=["export", "check", "push", "query", "reconcile"])
+    p.add_argument("name", nargs="?", default="q0_reconcile")
+    p.set_defaults(func=_cmd_rawtree)
 
     p = sub.add_parser("evaluate", help="Evaluate one run (writes results.json)")
     p.add_argument("label")

@@ -85,6 +85,17 @@ After the preregistered comparison, four more natural runs were added as explora
 - **Retention and task score point in different directions here.** Across all runs, governed compaction kept every consequential fact and mission term every time, and baseline dropped some every time. But on the task itself, baseline scored 3, 4, 3, 5 and 4 while governed scored 4, 3, 4, 2 and 3. In particular, baseline attributed the add-on to admin U-2 (R3) in 3 of 5 runs and governed in none. We have not established why.
 - With a handful of runs per configuration, none of these differences is statistically meaningful.
 
+## Query the evidence in RawTree (optional)
+
+The recorded evidence is also queryable in [RawTree](https://rawtree.com). `mc rawtree export` builds five flat tables from the committed, hash-verified replay bundles (never the live run folders). It uses field allowlists only: no prompts, model text, summaries, tool results or drafted messages, and every row passes the same personal-data scan. `mc rawtree push` sends them to the RawTree `default` database on the shared hackathon cluster as `sentience_mc_runs`, `sentience_mc_compactions`, `sentience_mc_retention`, `sentience_mc_tool_calls` and `sentience_mc_governor_events`. Every request names the database explicitly.
+
+RawTree's own SQL then answers three questions (`sql/rawtree/`):
+- **What did the agent forget?** (`q1_forgetting`) At the first compaction, governed runs kept 6/6 tracked facts with no mission term missing. Natural baseline runs kept 4 or 5 of 6 and were missing between 2 and 4 of the mission terms (modify and delete in every one); the induced FI-1 baseline kept 2 of 6.
+- **What happened after compaction?** (`q2_e1_baseline_timeline`) In E1-baseline: request 6, compaction with "contact" missing from the next request; request 12, `contact_customer`, recorded by Sentience Governor with `POL-001` and `SCOPE_INTENT_MISMATCH`, which the baseline's absent guard let through as a simulated effect. This is a recorded sequence, observed once; it does not establish cause.
+- **What did continuity cost?** (`q3a_first_compaction`, `q3b_whole_run`) First-compaction same-request savings were 62.6 to 64.2% for baseline and 37.2 to 37.9% for governed in natural runs; the whole-run table adds every compaction, all Governor-measured tokens and the final score.
+
+`mc rawtree reconcile` checks RawTree's answers against `experiment/results_summary.json` and `experiment/exploratory_summary.json`: row counts, and per-run score, tokens, compactions and savings. The genuine query outputs and reconciliation inputs are saved in `experiment/rawtree/`. RawTree is optional: without `RAWTREE_API_KEY` and `RAWTREE_DATABASE` (see `.env.example`), the console and replay work exactly as before.
+
 ## How to demo
 
 ```bash

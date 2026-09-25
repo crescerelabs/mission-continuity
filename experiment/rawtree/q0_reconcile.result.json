@@ -1,0 +1,49 @@
+{
+ "meta": [
+  {
+   "name": "tbl",
+   "type": "String"
+  },
+  {
+   "name": "distinct_rows",
+   "type": "UInt64"
+  },
+  {
+   "name": "stored_rows",
+   "type": "UInt64"
+  }
+ ],
+ "data": [
+  {
+   "tbl": "sentience_mc_compactions",
+   "distinct_rows": 12,
+   "stored_rows": 12
+  },
+  {
+   "tbl": "sentience_mc_governor_events",
+   "distinct_rows": 765,
+   "stored_rows": 765
+  },
+  {
+   "tbl": "sentience_mc_retention",
+   "distinct_rows": 144,
+   "stored_rows": 144
+  },
+  {
+   "tbl": "sentience_mc_runs",
+   "distinct_rows": 10,
+   "stored_rows": 10
+  },
+  {
+   "tbl": "sentience_mc_tool_calls",
+   "distinct_rows": 310,
+   "stored_rows": 310
+  }
+ ],
+ "rows": 5,
+ "statistics": {
+  "elapsed": 0.024210724,
+  "rows_read": 1241,
+  "bytes_read": 60809
+ }
+}

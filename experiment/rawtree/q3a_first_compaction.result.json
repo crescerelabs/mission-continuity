@@ -1,0 +1,114 @@
+{
+ "meta": [
+  {
+   "name": "condition",
+   "type": "String"
+  },
+  {
+   "name": "run_group",
+   "type": "String"
+  },
+  {
+   "name": "mode",
+   "type": "String"
+  },
+  {
+   "name": "runs",
+   "type": "UInt64"
+  },
+  {
+   "name": "min_saved_pct",
+   "type": "Nullable(Float64)"
+  },
+  {
+   "name": "max_saved_pct",
+   "type": "Nullable(Float64)"
+  },
+  {
+   "name": "avg_saved_pct",
+   "type": "Nullable(Float64)"
+  },
+  {
+   "name": "tokens_saved",
+   "type": "Nullable(Int64)"
+  },
+  {
+   "name": "runs_meeting_a2",
+   "type": "UInt64"
+  }
+ ],
+ "data": [
+  {
+   "condition": "induced:FI-1",
+   "run_group": "preregistered",
+   "mode": "baseline",
+   "runs": 1,
+   "min_saved_pct": 67.8,
+   "max_saved_pct": 67.8,
+   "avg_saved_pct": 67.8,
+   "tokens_saved": 7960,
+   "runs_meeting_a2": 1
+  },
+  {
+   "condition": "induced:FI-1",
+   "run_group": "preregistered",
+   "mode": "governed",
+   "runs": 1,
+   "min_saved_pct": 38.1,
+   "max_saved_pct": 38.1,
+   "avg_saved_pct": 38.1,
+   "tokens_saved": 4464,
+   "runs_meeting_a2": 0
+  },
+  {
+   "condition": "natural",
+   "run_group": "exploratory",
+   "mode": "baseline",
+   "runs": 2,
+   "min_saved_pct": 62.6,
+   "max_saved_pct": 64.2,
+   "avg_saved_pct": 63.4,
+   "tokens_saved": 16063,
+   "runs_meeting_a2": 2
+  },
+  {
+   "condition": "natural",
+   "run_group": "exploratory",
+   "mode": "governed",
+   "runs": 2,
+   "min_saved_pct": 37.2,
+   "max_saved_pct": 37.9,
+   "avg_saved_pct": 37.6,
+   "tokens_saved": 8987,
+   "runs_meeting_a2": 0
+  },
+  {
+   "condition": "natural",
+   "run_group": "preregistered",
+   "mode": "baseline",
+   "runs": 2,
+   "min_saved_pct": 63.1,
+   "max_saved_pct": 64.1,
+   "avg_saved_pct": 63.6,
+   "tokens_saved": 15292,
+   "runs_meeting_a2": 2
+  },
+  {
+   "condition": "natural",
+   "run_group": "preregistered",
+   "mode": "governed",
+   "runs": 2,
+   "min_saved_pct": 37.4,
+   "max_saved_pct": 37.9,
+   "avg_saved_pct": 37.6,
+   "tokens_saved": 8912,
+   "runs_meeting_a2": 0
+  }
+ ],
+ "rows": 6,
+ "statistics": {
+  "elapsed": 0.009143946,
+  "rows_read": 12,
+  "bytes_read": 2191
+ }
+}

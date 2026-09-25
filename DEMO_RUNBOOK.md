@@ -85,6 +85,13 @@ Outcome-bound lines. Each is supported by the named bundle's `results.json`; use
 - **Where:** Mode **Live**, pick the run started in stage 2.
 - **Say:** "And here's the live run we started. Whatever it has done so far is what's on screen."
 
+## Optional: the evidence in RawTree
+
+- **Do:** in a terminal, run `.venv/bin/mc rawtree query q2_e1_baseline_timeline` (needs `RAWTREE_API_KEY` and `RAWTREE_DATABASE=default` in `.env`).
+- **Expect:** two rows from RawTree: request 6, compaction with "contact" missing; request 12, `contact_customer` with Governor's POL-001 flag.
+- **Say:** "The same recorded evidence is in RawTree, and RawTree's SQL reconstructs the sequence from the raw Governor events. It happened once; it's a sequence, not a proven cause."
+- **If not:** skip it. The saved outputs are in `experiment/rawtree/`.
+
 ## Fallbacks
 
 - **No API access:** skip stages 1, 2 and 8. "API access isn't available here, so I'll show a recorded run. It's the same application and genuine artifacts."

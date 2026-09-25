@@ -1,0 +1,358 @@
+{
+ "database": "default",
+ "inserts": 50,
+ "rows_sent": 1241,
+ "rows_inserted_reported": 1241,
+ "per_insert": [
+  {
+   "bundle": "E0-baseline",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "bfe054c6-9c09-4c14-b099-bdebf28a2d92"
+  },
+  {
+   "bundle": "E0-baseline",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "ddc4a732-41a7-4ab0-8731-a2b837c86de4"
+  },
+  {
+   "bundle": "E0-baseline",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "593c57f2-bf91-4f82-b938-75e0f4905492"
+  },
+  {
+   "bundle": "E0-baseline",
+   "table": "sentience_mc_tool_calls",
+   "rows": 35,
+   "inserted": 35,
+   "query_id": "20e67be7-d206-43fc-a25d-92d4ba9b5bd0"
+  },
+  {
+   "bundle": "E0-baseline",
+   "table": "sentience_mc_governor_events",
+   "rows": 85,
+   "inserted": 85,
+   "query_id": "83440008-09e2-4107-b183-5abc1312422a"
+  },
+  {
+   "bundle": "E0-governed",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "e7e67a33-1c4c-4a35-a762-7efe3b6077e4"
+  },
+  {
+   "bundle": "E0-governed",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "ae857e43-731f-4400-a3d8-8782bde957ba"
+  },
+  {
+   "bundle": "E0-governed",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "bed1c13a-b60f-4c0a-8ad7-9a382b24ec9b"
+  },
+  {
+   "bundle": "E0-governed",
+   "table": "sentience_mc_tool_calls",
+   "rows": 26,
+   "inserted": 26,
+   "query_id": "be440cba-0902-485c-898f-3ab06ee7ddab"
+  },
+  {
+   "bundle": "E0-governed",
+   "table": "sentience_mc_governor_events",
+   "rows": 64,
+   "inserted": 64,
+   "query_id": "2356ba5e-262b-4a83-b1e7-30840668a4d7"
+  },
+  {
+   "bundle": "E1-baseline",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "f29e8107-ad00-4004-9c7c-45dbef03ad2d"
+  },
+  {
+   "bundle": "E1-baseline",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "d16f9d71-6aae-4c36-bb26-f410448b66a4"
+  },
+  {
+   "bundle": "E1-baseline",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "03eeb8e1-ecce-4615-8ccb-4f4ad70ecc63"
+  },
+  {
+   "bundle": "E1-baseline",
+   "table": "sentience_mc_tool_calls",
+   "rows": 35,
+   "inserted": 35,
+   "query_id": "c675c70b-1239-418f-a986-b55758b2a8ef"
+  },
+  {
+   "bundle": "E1-baseline",
+   "table": "sentience_mc_governor_events",
+   "rows": 89,
+   "inserted": 89,
+   "query_id": "e35a2cfe-6af1-4712-885b-3b5e4a8ecb21"
+  },
+  {
+   "bundle": "E1-governed",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "ef128af0-8ccc-4d25-9133-7fde01dda468"
+  },
+  {
+   "bundle": "E1-governed",
+   "table": "sentience_mc_compactions",
+   "rows": 2,
+   "inserted": 2,
+   "query_id": "5b2ee569-7b57-4626-af46-b8476523767b"
+  },
+  {
+   "bundle": "E1-governed",
+   "table": "sentience_mc_retention",
+   "rows": 24,
+   "inserted": 24,
+   "query_id": "0cb0c8d2-f0f6-4a07-ac65-790b6a5bef79"
+  },
+  {
+   "bundle": "E1-governed",
+   "table": "sentience_mc_tool_calls",
+   "rows": 37,
+   "inserted": 37,
+   "query_id": "aab6ac19-b448-4e1d-a8ff-39b170118cbc"
+  },
+  {
+   "bundle": "E1-governed",
+   "table": "sentience_mc_governor_events",
+   "rows": 93,
+   "inserted": 93,
+   "query_id": "c74802bf-1ee1-418b-be48-b45bd0bfa5bb"
+  },
+  {
+   "bundle": "E1x-baseline-1",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "5f4de5ca-f597-493a-8d81-2f1fbefbe29a"
+  },
+  {
+   "bundle": "E1x-baseline-1",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "1a55e2e3-a7b1-47ea-befe-5df424181b02"
+  },
+  {
+   "bundle": "E1x-baseline-1",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "5c7e3928-5cc9-4cff-9d4b-589327d5536e"
+  },
+  {
+   "bundle": "E1x-baseline-1",
+   "table": "sentience_mc_tool_calls",
+   "rows": 24,
+   "inserted": 24,
+   "query_id": "9d147130-b9e3-450c-ba96-e81df124c552"
+  },
+  {
+   "bundle": "E1x-baseline-1",
+   "table": "sentience_mc_governor_events",
+   "rows": 59,
+   "inserted": 59,
+   "query_id": "3b512917-6748-45dd-bd5b-cbda9282201b"
+  },
+  {
+   "bundle": "E1x-baseline-2",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "2dd1d844-1af5-4035-8407-55a8dc0c8b9b"
+  },
+  {
+   "bundle": "E1x-baseline-2",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "7d01e322-8bb6-4fbc-9820-bed63cf5fb51"
+  },
+  {
+   "bundle": "E1x-baseline-2",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "4de47eab-d3da-4db6-bbd9-e37b795d53b3"
+  },
+  {
+   "bundle": "E1x-baseline-2",
+   "table": "sentience_mc_tool_calls",
+   "rows": 24,
+   "inserted": 24,
+   "query_id": "97d78805-bd24-45c7-8f30-b55bbc81859b"
+  },
+  {
+   "bundle": "E1x-baseline-2",
+   "table": "sentience_mc_governor_events",
+   "rows": 59,
+   "inserted": 59,
+   "query_id": "8c295524-b26b-4b1b-890c-6b55fb9f0867"
+  },
+  {
+   "bundle": "E1x-governed-1",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "ad5de5d5-8ddb-4587-862b-b6661026c922"
+  },
+  {
+   "bundle": "E1x-governed-1",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "335d0dae-624b-46c1-abed-b010a486bcb6"
+  },
+  {
+   "bundle": "E1x-governed-1",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "8bbb90a0-b307-4379-9e7d-1bb66ceb90a6"
+  },
+  {
+   "bundle": "E1x-governed-1",
+   "table": "sentience_mc_tool_calls",
+   "rows": 28,
+   "inserted": 28,
+   "query_id": "88f9a6ce-3bc3-4348-84eb-870bddc336e7"
+  },
+  {
+   "bundle": "E1x-governed-1",
+   "table": "sentience_mc_governor_events",
+   "rows": 68,
+   "inserted": 68,
+   "query_id": "f63a5f2c-0ab4-4f70-8f2e-d9fd262527ae"
+  },
+  {
+   "bundle": "E1x-governed-2",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "006f7891-abfc-42eb-9adb-7883b1fb4877"
+  },
+  {
+   "bundle": "E1x-governed-2",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "c456c458-096d-4f7a-9250-5441c63b29c5"
+  },
+  {
+   "bundle": "E1x-governed-2",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "ef3c32b7-f750-4be3-a514-7728f53689fa"
+  },
+  {
+   "bundle": "E1x-governed-2",
+   "table": "sentience_mc_tool_calls",
+   "rows": 28,
+   "inserted": 28,
+   "query_id": "d55683b4-c918-4a75-8d60-5fdd887c6ee3"
+  },
+  {
+   "bundle": "E1x-governed-2",
+   "table": "sentience_mc_governor_events",
+   "rows": 68,
+   "inserted": 68,
+   "query_id": "d752e96b-3b17-44a5-b73d-678dd450b6c5"
+  },
+  {
+   "bundle": "E2-baseline",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "6af6f340-7ea6-4158-a32f-03430cb1c40d"
+  },
+  {
+   "bundle": "E2-baseline",
+   "table": "sentience_mc_compactions",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "a9daaeaa-8ca9-4dec-85b5-e6fc902724d1"
+  },
+  {
+   "bundle": "E2-baseline",
+   "table": "sentience_mc_retention",
+   "rows": 12,
+   "inserted": 12,
+   "query_id": "cf59ab56-c021-4d27-ba13-cdd37e7768a7"
+  },
+  {
+   "bundle": "E2-baseline",
+   "table": "sentience_mc_tool_calls",
+   "rows": 40,
+   "inserted": 40,
+   "query_id": "40f65397-f899-4ec3-98bd-498b535df8a4"
+  },
+  {
+   "bundle": "E2-baseline",
+   "table": "sentience_mc_governor_events",
+   "rows": 97,
+   "inserted": 97,
+   "query_id": "59967aab-ac1b-4fc2-84ee-9bbe07d4a8ec"
+  },
+  {
+   "bundle": "E2-governed",
+   "table": "sentience_mc_runs",
+   "rows": 1,
+   "inserted": 1,
+   "query_id": "2f8220c2-c539-44a4-9667-9ee6eb3ef87c"
+  },
+  {
+   "bundle": "E2-governed",
+   "table": "sentience_mc_compactions",
+   "rows": 2,
+   "inserted": 2,
+   "query_id": "921a02d7-8084-4fdc-85c3-5e2c6d4293b9"
+  },
+  {
+   "bundle": "E2-governed",
+   "table": "sentience_mc_retention",
+   "rows": 24,
+   "inserted": 24,
+   "query_id": "65d02a74-47d9-4b8c-b511-f0ab5a8c5469"
+  },
+  {
+   "bundle": "E2-governed",
+   "table": "sentience_mc_tool_calls",
+   "rows": 33,
+   "inserted": 33,
+   "query_id": "c2be31c6-dae0-4e17-89b2-2cbcf175ac53"
+  },
+  {
+   "bundle": "E2-governed",
+   "table": "sentience_mc_governor_events",
+   "rows": 83,
+   "inserted": 83,
+   "query_id": "97f69882-abca-4a56-b627-33643acfad45"
+  }
+ ]
+}

@@ -1,0 +1,23 @@
+{
+ "export_version": 1,
+ "bundles": [
+  "E0-baseline",
+  "E0-governed",
+  "E1-baseline",
+  "E1-governed",
+  "E1x-baseline-1",
+  "E1x-baseline-2",
+  "E1x-governed-1",
+  "E1x-governed-2",
+  "E2-baseline",
+  "E2-governed"
+ ],
+ "row_counts": {
+  "sentience_mc_runs": 10,
+  "sentience_mc_compactions": 12,
+  "sentience_mc_retention": 144,
+  "sentience_mc_tool_calls": 310,
+  "sentience_mc_governor_events": 765
+ },
+ "leak_scan": "0 values found"
+}

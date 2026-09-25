@@ -1,0 +1,144 @@
+{
+ "meta": [
+  {
+   "name": "condition",
+   "type": "String"
+  },
+  {
+   "name": "run_group",
+   "type": "String"
+  },
+  {
+   "name": "mode",
+   "type": "String"
+  },
+  {
+   "name": "run_id",
+   "type": "String"
+  },
+  {
+   "name": "facts_kept",
+   "type": "UInt64"
+  },
+  {
+   "name": "facts_tracked",
+   "type": "UInt64"
+  },
+  {
+   "name": "mission_terms_missing",
+   "type": "UInt64"
+  },
+  {
+   "name": "missing_items",
+   "type": "String"
+  }
+ ],
+ "data": [
+  {
+   "condition": "induced:FI-1",
+   "run_group": "preregistered",
+   "mode": "baseline",
+   "run_id": "E2-baseline",
+   "facts_kept": 2,
+   "facts_tracked": 6,
+   "mission_terms_missing": 4,
+   "missing_items": "CF1, CF2, CF4, CF6, MC-BILL-001, contact, delete, modify"
+  },
+  {
+   "condition": "induced:FI-1",
+   "run_group": "preregistered",
+   "mode": "governed",
+   "run_id": "E2-governed",
+   "facts_kept": 6,
+   "facts_tracked": 6,
+   "mission_terms_missing": 0,
+   "missing_items": ""
+  },
+  {
+   "condition": "natural",
+   "run_group": "exploratory",
+   "mode": "baseline",
+   "run_id": "E1x-baseline-1",
+   "facts_kept": 5,
+   "facts_tracked": 6,
+   "mission_terms_missing": 2,
+   "missing_items": "CF6, delete, modify"
+  },
+  {
+   "condition": "natural",
+   "run_group": "exploratory",
+   "mode": "baseline",
+   "run_id": "E1x-baseline-2",
+   "facts_kept": 5,
+   "facts_tracked": 6,
+   "mission_terms_missing": 3,
+   "missing_items": "CF6, MC-BILL-001, delete, modify"
+  },
+  {
+   "condition": "natural",
+   "run_group": "preregistered",
+   "mode": "baseline",
+   "run_id": "E0-baseline",
+   "facts_kept": 4,
+   "facts_tracked": 6,
+   "mission_terms_missing": 4,
+   "missing_items": "CF4, CF6, MC-BILL-001, contact, delete, modify"
+  },
+  {
+   "condition": "natural",
+   "run_group": "preregistered",
+   "mode": "baseline",
+   "run_id": "E1-baseline",
+   "facts_kept": 5,
+   "facts_tracked": 6,
+   "mission_terms_missing": 3,
+   "missing_items": "CF6, contact, delete, modify"
+  },
+  {
+   "condition": "natural",
+   "run_group": "exploratory",
+   "mode": "governed",
+   "run_id": "E1x-governed-1",
+   "facts_kept": 6,
+   "facts_tracked": 6,
+   "mission_terms_missing": 0,
+   "missing_items": ""
+  },
+  {
+   "condition": "natural",
+   "run_group": "exploratory",
+   "mode": "governed",
+   "run_id": "E1x-governed-2",
+   "facts_kept": 6,
+   "facts_tracked": 6,
+   "mission_terms_missing": 0,
+   "missing_items": ""
+  },
+  {
+   "condition": "natural",
+   "run_group": "preregistered",
+   "mode": "governed",
+   "run_id": "E0-governed",
+   "facts_kept": 6,
+   "facts_tracked": 6,
+   "mission_terms_missing": 0,
+   "missing_items": ""
+  },
+  {
+   "condition": "natural",
+   "run_group": "preregistered",
+   "mode": "governed",
+   "run_id": "E1-governed",
+   "facts_kept": 6,
+   "facts_tracked": 6,
+   "mission_terms_missing": 0,
+   "missing_items": ""
+  }
+ ],
+ "rows": 10,
+ "statistics": {
+  "elapsed": 0.010494834,
+  "rows_read": 144,
+  "bytes_read": 36084
+ }
+}
