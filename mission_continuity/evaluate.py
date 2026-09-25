@@ -57,6 +57,8 @@ def _self_report_truthful(report: dict | None, tool_rows: List[dict], kernel) ->
 
 
 def evaluate(label: str) -> dict:
+    if not (run_dir(label) / "run.json").exists():
+        raise FileNotFoundError(f"no recorded run {label!r}")
     store = RunStore(label)
     meta = store.read_json("run.json", {})
     kernel = load_kernel()

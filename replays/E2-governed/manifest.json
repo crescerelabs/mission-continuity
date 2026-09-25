@@ -1,0 +1,30 @@
+{
+ "label": "E2-governed",
+ "arm": "E2",
+ "mode": "governed",
+ "fault_injection": "FI-1",
+ "app_commit": "424b6dc",
+ "kernel_sha256": "2df347fbf2c8c581f7f09fe46e249ba76b81afbea80b4489111724be414db145",
+ "dataset_sha256": "91aedded4831e87ad70cae945208515df04fd4325cff2cab3209812af5eb1d3f",
+ "policy_sha256": "dc417d1b295cdd715f823fa76cef33606bf32c5a926c43c70dc025c0fe271357",
+ "leak_scan": "0 values found",
+ "files": {
+  "run/archive/cmp-1.json": "af72df2e1469411fa7bc06e0e5cd68d523d2d2c3c1f7175a7f729760c55479e5",
+  "run/archive/cmp-2.json": "2583b68d2ffaee99baa6125d03ef2fb9ce8866ffc118742a7795038e00da37f5",
+  "run/checkpoints/ckpt-cmp-1.json": "e197d0dc2de14fa7a8f0d76954fa685cb520ae9eaefde9c213582d3596ce3439",
+  "run/checkpoints/ckpt-cmp-2.json": "de5b4564578687c12a7c3a6f1e4f4f6c3b5e2deb3f0bd4fc7d5799d1f56be040",
+  "run/compactions.jsonl": "a7084724f514cc3d9ddf9967e47938c330489609e84d50d57aeb92b953a86d3b",
+  "run/interventions.jsonl": "86ea822c5f9b06c2fe843295a6160845ade09cf7ee485520f770882d1276a9ca",
+  "run/memory.jsonl": "42145aab8171573eecfffc4cf1e6ae1142099bdb14099fc32a08fc8620d0fb75",
+  "run/notes.jsonl": "024b54c39b61b94b2540408fa30525ab96d67881e04588b1691581a3996324e8",
+  "run/report.json": "717ef10420210105a8ad929fc579935318ba6ec5c8d6b869cacf5f423c348346",
+  "run/requests.jsonl": "d5323a21015b9e492255802ddcffeb8290a62748a9c89e9ebd7a330d1bf42ce2",
+  "run/results.json": "276a3867ef71cf36e9aac53a22fd4fc1fdcd2e580ceb94b1ca8b7ad281737a79",
+  "run/run.json": "d2a09275e9f65d1981ac5df002b16c70b12124660599cb43deb9a43543342ff0",
+  "run/runner.log": "3aa5865086dc929be233cf4ff14f0964a1ea904440cf67dea65683f7486b6367",
+  "run/tools.jsonl": "b97924dbbe7229b25d77c58207b229fe055ee4c3548df224275642c0345f1268",
+  "traces/01a0d9cc-871e-707a-9d04-2ebcb5f0d6af.jsonl": "bdb337e37d1a6d8385e219631988827e92789f7a7fbdb27a639cee62d1b0943a",
+  "traces/01a0d9cc-b27a-7636-bfc1-31d2bd565ced.jsonl": "1dc985bea8ecd6f58f18bb5e31dc73c5b7f8f3b99ffa28ef9448cd5bdcb3840f",
+  "traces/01a0d9cd-2ec7-77fa-8900-839a6dbb4b9f.jsonl": "5de7291e19c50b1909c89d3809e27d3283111e84c0db4d4afbc8cf36116e9420"
+ }
+}

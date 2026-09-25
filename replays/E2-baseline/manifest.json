@@ -1,0 +1,25 @@
+{
+ "label": "E2-baseline",
+ "arm": "E2",
+ "mode": "baseline",
+ "fault_injection": "FI-1",
+ "app_commit": "424b6dc",
+ "kernel_sha256": "2df347fbf2c8c581f7f09fe46e249ba76b81afbea80b4489111724be414db145",
+ "dataset_sha256": "91aedded4831e87ad70cae945208515df04fd4325cff2cab3209812af5eb1d3f",
+ "policy_sha256": "dc417d1b295cdd715f823fa76cef33606bf32c5a926c43c70dc025c0fe271357",
+ "leak_scan": "0 values found",
+ "files": {
+  "run/archive/cmp-1.json": "22e34d6eefd0880a6bb69fa25c05eb6c5aaf63fa4ee207ed5973605885d2d004",
+  "run/compactions.jsonl": "0b3e5bb7c01e9aab7e934870c44d034408831782eefca454247a45bb0a39f85b",
+  "run/interventions.jsonl": "660fcff094f432fc96cae8f26aef16b3bf6a8dac6236798a6d641af5b39262f2",
+  "run/notes.jsonl": "35b36d594be7fb4a7361cdc2039013bb365ba184e317c83bc9c28cccf4a635b4",
+  "run/report.json": "8cf9b51c3c66137f6837549ede8d219dbd2add8b6e701a4c545df6a76f29b77a",
+  "run/requests.jsonl": "8860a3e1ef31f2653e50777aba82c89b8860e60cfe91ad597b116ea85e188b2f",
+  "run/results.json": "95a376ae89d89532ea1fbac2788578e08d8dfc22858e3e31d7190404c3ab990c",
+  "run/run.json": "9dc78094c2486dbe73395dbcc30811ee96dba8c65f17b63e736e8ca8c2b8e998",
+  "run/runner.log": "dc34d4ff651a962fc2a3b720ced3d530cf972ab2e756808f95e03411db92066b",
+  "run/tools.jsonl": "b90f6916758b25036b0099bda4cea531a6b5e4e3771679d5ab543614b3ed7cce",
+  "traces/01a0d9cb-5c2d-7395-939e-1a0069b271c2.jsonl": "64b7ebb3ef4332c93b16cd2d281f2127f3555d81821c5b70aa70594f9f36b680",
+  "traces/01a0d9cb-8677-74f2-82f7-7e82ca0c5753.jsonl": "0e34909097352560da32cea136a0c1b32ae44659ffef723868aad79a69fc7a76"
+ }
+}

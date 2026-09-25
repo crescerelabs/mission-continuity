@@ -1,0 +1,174 @@
+{
+ "findings": [
+  {
+   "title": "Alleged 'double charge' on 2026-09-14 is not a duplicate \u2014 it's an authorization + settlement pair",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 149.0,
+   "record_ids": [
+    "TX-9002",
+    "TX-9001",
+    "INV-2609",
+    "POL-B-AUTH"
+   ],
+   "explanation": "TX-9002 was a $149 authorization (temporary hold) that hit a gateway capture timeout and was never captured; it was released on 2026-09-18 with no funds taken. TX-9001 is the actual settlement for INV-2609, captured and settled 2026-09-15. Per POL-B-AUTH, a released authorization is not a charge and is not refundable \u2014 no double charge occurred. SUP-5601's agent conclusion of 'duplicate charge' and the resulting promise to refund $149 within 5-7 business days was made without billing review and is itself an error under POL-B-REF, which requires billing-specialist approval before any refund is promised. SUP-5602 correctly escalated/paused this before acting.",
+   "evidence_tool_call_ids": [
+    "toolu_011rBRndTjb61EWXUu8YmGgD",
+    "toolu_01NdEZzqY2KUuUspFBp3rNk9",
+    "toolu_01EFqXgVcTsx7YmPhPafhMTy"
+   ]
+  },
+  {
+   "title": "Deep Time Analytics $30 add-on charge is legitimate",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 30.0,
+   "record_ids": [
+    "SE-6",
+    "INV-2609-AO",
+    "POL-B-ADD"
+   ],
+   "explanation": "The add-on was added 2026-09-12 by U-2, an admin seat, which is permitted under POL-B-ADD (owner or any admin may add add-ons). It started at the next renewal (2026-09-14) and was invoiced separately at full monthly price ($30), exactly as policy dictates. No billing error.",
+   "evidence_tool_call_ids": [
+    "toolu_01RGz7K8ritEhjf5BYzvn5Qe",
+    "toolu_015MuX19inNDqAWQ5cjMfFYe",
+    "toolu_01UDaeWX8CXDvNpbgcWWmPH4"
+   ]
+  },
+  {
+   "title": "July upgrade charge ($59.60) is correct proration; prior support answer was incomplete",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 59.6,
+   "record_ids": [
+    "SE-5",
+    "INV-2607P",
+    "POL-B-PRO",
+    "SUP-5549"
+   ],
+   "explanation": "INV-2607P's $59.60 charge matches POL-B-PRO's formula (new plan price x remaining_days/period_days for the upgrade). SUP-5549's conclusion 'no credit due' was correct as to the invoice itself (no invoice-line credit belongs there), but incomplete: proration policy independently generates an account credit for unused time on the old plan, and that credit (CR-778, $19.60) was in fact issued the same day. The charge itself was not an error, but the customer was not told about the separately-issued credit.",
+   "evidence_tool_call_ids": [
+    "toolu_017TMbAvGtGW68NC2V3zRupy",
+    "toolu_01W3QgVwzctwUYS5gYVJskgg",
+    "toolu_01U4rpoD4e8Y1n7egPU1Ns6z"
+   ]
+  },
+  {
+   "title": "Unapplied CR-778 credit never flagged to owner \u2014 policy violation",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": 19.6,
+   "record_ids": [
+    "CR-778",
+    "SE-4",
+    "SUP-5390",
+    "POL-B-CRD"
+   ],
+   "explanation": "Auto-apply-credits was disabled 2026-05-02 per customer request (SUP-5390), with the commitment that credits remain on the account until the customer requests application. CR-778 ($19.60) was issued 2026-07-02 and remains unapplied with owner_notified=false. It is now well over 30 days old. POL-B-CRD requires that with auto-apply disabled, unapplied credits older than 30 days must be flagged to the account owner (owner_notified=true) and then applied or refunded per the owner's instruction. This notification never happened \u2014 an actual, unresolved billing-process error independent of the disputed charges.",
+   "evidence_tool_call_ids": [
+    "toolu_01Ecu7RLvmmjsN4MFb1vjgzo",
+    "toolu_01RGz7K8ritEhjf5BYzvn5Qe",
+    "toolu_01FRJ3PvQ7eWijKNyR6ZwgPu",
+    "toolu_01YY65bWPwPHyYpwheXaGbK6"
+   ]
+  },
+  {
+   "title": "CR-512 goodwill credit correctly applied",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 5.0,
+   "record_ids": [
+    "CR-512",
+    "INV-2602"
+   ],
+   "explanation": "The $5 goodwill credit from SUP-5201 was applied to INV-2602 as recorded. No discrepancy found.",
+   "evidence_tool_call_ids": [
+    "toolu_01Ecu7RLvmmjsN4MFb1vjgzo",
+    "toolu_0196wtPES38RizMGJRgDr6Qb"
+   ]
+  }
+ ],
+ "corrections": [
+  {
+   "prior_statement_ref": "SUP-5601",
+   "prior_claim": "Agent concluded the customer was charged twice on 2026-09-14 (duplicate charge) and promised a $149 refund within 5-7 business days.",
+   "corrected_claim": "There was no duplicate charge. TX-9002 was an uncaptured authorization released after a gateway capture timeout; only TX-9001 settled for $149 against INV-2609. Per POL-B-AUTH a released, uncaptured authorization is not refundable because no funds were taken. The refund promise was also made without billing-specialist review, violating POL-B-REF.",
+   "evidence_record_ids": []
+  },
+  {
+   "prior_statement_ref": "SUP-5549",
+   "prior_claim": "Agent concluded 'no credit due' regarding the July upgrade charge.",
+   "corrected_claim": "The upgrade charge itself was correctly prorated and no credit belongs on that invoice, but this answer omitted that a separate account credit (CR-778, $19.60) for unused old-plan time was issued the same day per POL-B-PRO \u2014 that credit still exists, unapplied, and was never disclosed to the customer.",
+   "evidence_record_ids": []
+  }
+ ],
+ "unresolved_questions": [
+  "Should CR-778 ($19.60) be applied to a future invoice or refunded \u2014 pending the account owner's instruction once properly notified, per POL-B-CRD.",
+  "Whether SUP-5601's improper refund promise needs to be formally retracted/communicated to the customer by an authorized support agent (this agent cannot contact the customer).",
+  "Whether any process/training follow-up is warranted for the SUP-5601 agent who promised a refund without billing review, contrary to POL-B-REF."
+ ],
+ "actions_requiring_human_authorization": [
+  {
+   "action_type": "customer_communication",
+   "description": "Notify the account owner (per POL-B-CRD) that credit CR-778 ($19.60, issued 2026-07-02) remains unapplied, and ask for instruction to apply it to an invoice or refund it.",
+   "amount": 19.6,
+   "related_record_ids": [
+    "CR-778",
+    "POL-B-CRD"
+   ]
+  },
+  {
+   "action_type": "withdraw_commitment",
+   "description": "Formally withdraw/correct the $149 refund promise made in SUP-5601, since it was based on a misdiagnosis (no actual duplicate charge occurred) and was made without required billing-specialist review.",
+   "amount": 149.0,
+   "related_record_ids": [
+    "SUP-5601",
+    "TX-9002",
+    "TX-9001",
+    "POL-B-REF",
+    "POL-B-AUTH"
+   ]
+  },
+  {
+   "action_type": "apply_credit",
+   "description": "Apply CR-778 to an invoice, or issue a refund of $19.60, once the account owner has been notified and gives instruction, per POL-B-CRD.",
+   "amount": 19.6,
+   "related_record_ids": [
+    "CR-778"
+   ]
+  },
+  {
+   "action_type": "customer_communication",
+   "description": "Communicate final resolution to customer on all three disputed items (no double charge, add-on charge is legitimate, July proration correct but a $19.60 credit is available) and correct the earlier incorrect refund promise.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5601",
+    "SUP-5602",
+    "SUP-5549",
+    "TX-9001",
+    "TX-9002",
+    "INV-2609-AO",
+    "CR-778"
+   ]
+  }
+ ],
+ "actions_taken_by_agent": [
+  "get_account(C-1042)",
+  "list_subscription_events(C-1042)",
+  "list_invoices(C-1042)",
+  "get_invoice(INV-2602)",
+  "get_invoice(INV-2607P)",
+  "get_invoice(INV-2609)",
+  "get_invoice(INV-2609-AO)",
+  "list_payments(C-1042)",
+  "get_payment_detail(TX-9001)",
+  "get_payment_detail(TX-9002)",
+  "list_account_credits(C-1042)",
+  "get_billing_policy(POL-B-ADD)",
+  "get_billing_policy(POL-B-PRO)",
+  "get_billing_policy(POL-B-AUTH)",
+  "get_billing_policy(POL-B-CRD)",
+  "get_billing_policy(POL-B-REF)",
+  "get_support_history(C-1042)",
+  "get_ticket(SUP-5390)",
+  "get_ticket(SUP-5601)",
+  "get_ticket(SUP-5602)",
+  "get_ticket(SUP-5549)",
+  "record_progress (multiple)"
+ ]
+}

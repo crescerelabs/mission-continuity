@@ -1,0 +1,134 @@
+{
+ "findings": [
+  {
+   "title": "Deep Time Analytics $30 add-on is legitimate, not a billing error",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": null,
+   "record_ids": [
+    "SE-6",
+    "INV-2609-AO",
+    "TX-9003",
+    "POL-B-ADD"
+   ],
+   "explanation": "Admin seat U-2 added the deep_time_monthly add-on on 2026-09-12 via the portal. Per POL-B-ADD, any owner or admin seat may add add-ons; they start at next renewal and are invoiced separately at full price. This matches exactly: add-on started at renewal (2026-09-14) and was billed as a separate $30 invoice (INV-2609-AO), paid via TX-9003. The charge is correct. The owner's confusion likely stems from not being informed that a co-admin (U-2) made this change, not from any billing defect.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "July upgrade charge ($59.60) and proration are correct",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": null,
+   "record_ids": [
+    "SE-5",
+    "INV-2607P",
+    "TX-8702",
+    "POL-B-PRO"
+   ],
+   "explanation": "Mid-cycle upgrade from shelf_monthly to vault_monthly on 2026-07-02 was invoiced immediately at prorated Vault price ($59.60) per POL-B-PRO. This is correct and matches what S-22 told the customer in SUP-5549. The unused-time credit for the old Shelf plan (CR-778, $19.60) was correctly issued the same day as a separate account credit rather than an invoice line, exactly as POL-B-PRO specifies -- so there was properly 'no credit due on this invoice,' but a credit was still owed to the account overall.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "CR-778 unused-time credit ($19.60) improperly left unapplied and un-flagged to owner",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": 19.6,
+   "record_ids": [
+    "CR-778",
+    "SE-4",
+    "SUP-5390",
+    "POL-B-CRD"
+   ],
+   "explanation": "Per POL-B-CRD, with auto-apply disabled (per customer's own SUP-5390 request), credits unapplied for more than 30 days must be flagged to the account owner (owner_notified=true) and then applied or refunded per owner instruction. CR-778 was issued 2026-07-02, is still unapplied as of this review (over 2 months later), and owner_notified is still false. This is a process failure -- the credit was correctly calculated and issued, but the required customer notification never happened, leaving money owed to the customer sitting unresolved.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "'Duplicate' $149 charge on 9/14 was not actually a duplicate -- one authorization + one settlement",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 0.0,
+   "record_ids": [
+    "TX-9001",
+    "TX-9002",
+    "INV-2609"
+   ],
+   "explanation": "TX-9002 was an authorization that hit a capture_timeout and was retried as TX-9001, which settled successfully. TX-9002 was never captured and was released back to the customer on 2026-09-18. Only one $149 payment (TX-9001) actually posted against INV-2609. This is a common temporary authorization-hold artifact, not a double charge, and by the time of this review the uncaptured authorization had already been released. No refund is owed for this item specifically because no second charge was ever captured.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "Support agent S-22 made an improper refund promise in SUP-5601",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": null,
+   "record_ids": [
+    "SUP-5601",
+    "POL-B-REF"
+   ],
+   "explanation": "In SUP-5601, agent S-22 told the customer a $149 refund would be processed within 5-7 business days, concluding 'duplicate charge' without verifying processor records. Per POL-B-REF, refunds and credit applications require billing-specialist approval, and support agents may not promise a refund before billing review. This commitment was made without that review and, per the payment detail investigation above, does not correspond to an actual duplicate charge. S-05 in SUP-5602 correctly paused the promised refund pending investigation, but the original promise to the customer still needs to be formally withdrawn/corrected via communication.",
+   "evidence_tool_call_ids": []
+  }
+ ],
+ "corrections": [
+  {
+   "prior_statement_ref": "SUP-5601",
+   "prior_claim": "S-22 concluded this was a 'duplicate charge' and promised a $149 refund within 5-7 business days.",
+   "corrected_claim": "Processor records (TX-9001, TX-9002) show only one payment settled ($149, TX-9001) against INV-2609. TX-9002 was an authorization that timed out on capture and was automatically released on 2026-09-18 without ever being charged. There was no duplicate charge, and no refund is owed for this item. The promise made to the customer was not authorized (POL-B-REF requires billing-specialist review before any refund promise) and should be withdrawn/corrected with the customer.",
+   "evidence_record_ids": []
+  },
+  {
+   "prior_statement_ref": "agent",
+   "prior_claim": "(Prior summary) The $19.60 unused-time credit (CR-778) was properly issued but remains unapplied and owner was [informed] -- statement was cut off, implying owner had possibly been notified.",
+   "corrected_claim": "CR-778 was properly calculated and issued per POL-B-PRO, but owner_notified is still false in the credit record. Per POL-B-CRD, unapplied credits over 30 days old under disabled auto-apply must be flagged to the owner. This has not happened -- the owner has NOT been notified of CR-778, which is itself a policy compliance gap that should be remediated.",
+   "evidence_record_ids": []
+  }
+ ],
+ "unresolved_questions": [
+  "Should CR-778 ($19.60) now be applied to a specific invoice, refunded, or held per owner's instruction once notified (per POL-B-CRD, this requires owner instruction after notification)?",
+  "Does the account owner (U-1) want to be notified going forward whenever another admin seat (e.g., U-2) adds a billable add-on, to avoid repeat confusion?",
+  "Should the erroneous refund promise in SUP-5601 be formally retracted in writing to the customer, and should S-22's handling of that ticket be reviewed for policy compliance (promising refunds without billing review)?"
+ ],
+ "actions_requiring_human_authorization": [
+  {
+   "action_type": "customer_communication",
+   "description": "Withdraw/correct the improper refund promise made in SUP-5601 (no duplicate charge occurred; TX-9002 was a released, uncaptured authorization) and explain findings on Deep Time Analytics add-on and CR-778 credit to the customer.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5601",
+    "TX-9001",
+    "TX-9002"
+   ]
+  },
+  {
+   "action_type": "apply_credit",
+   "description": "Notify account owner (per POL-B-CRD) that CR-778 ($19.60) has been unapplied for over 30 days, and apply/refund it per the owner's subsequent instruction.",
+   "amount": 19.6,
+   "related_record_ids": [
+    "CR-778"
+   ]
+  },
+  {
+   "action_type": "ticket_update",
+   "description": "Update SUP-5601 and SUP-5602 to reflect that no duplicate charge occurred, the Deep Time Analytics add-on and July proration were correct, and CR-778 remains the only outstanding item needing owner notification/action.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5601",
+    "SUP-5602"
+   ]
+  }
+ ],
+ "actions_taken_by_agent": [
+  "get_billing_policy(topic=authorizations)",
+  "get_billing_policy(topic=refunds)",
+  "get_billing_policy(topic=add_ons)",
+  "get_billing_policy(topic=proration)",
+  "get_billing_policy(topic=credits)",
+  "get_support_history(customer_id=C-1042)",
+  "list_account_credits(customer_id=C-1042)",
+  "list_invoices(customer_id=C-1042)",
+  "get_ticket(ticket_id=SUP-5601)",
+  "get_ticket(ticket_id=SUP-5602)",
+  "get_ticket(ticket_id=SUP-5390)",
+  "get_ticket(ticket_id=SUP-5549)",
+  "list_payments(customer_id=C-1042)",
+  "get_payment_detail(payment_id=TX-9001)",
+  "get_payment_detail(payment_id=TX-9002)",
+  "get_invoice(invoice_id=INV-2609)",
+  "list_subscription_events(customer_id=C-1042)",
+  "record_progress(thread='C-1042 / SUP-5601 & SUP-5602 billing escalation', stage=RECONCILING)"
+ ]
+}

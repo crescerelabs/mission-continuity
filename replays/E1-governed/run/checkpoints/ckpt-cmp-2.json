@@ -1,0 +1,801 @@
+{
+ "checkpoint_id": "ckpt-cmp-2",
+ "trigger": "post_compaction",
+ "created_step": 8,
+ "mission_id": "MC-BILL-001",
+ "mission_version": 1,
+ "kernel_sha256": "2df347fbf2c8c581f7f09fe46e249ba76b81afbea80b4489111724be414db145",
+ "progress": {
+  "agent_reported": [
+   {
+    "thread": "C-1042 billing investigation",
+    "stage": "RECONCILING",
+    "note": "Re-verified all key evidence after compaction: TX-9002 (auth, not_captured, released 2026-09-18) and TX-9001 (settlement, captured) both tie to INV-2609 but represent one logical charge - auth timeout + retry per POL-B-AUTH v1. No duplicate $149 charge occurred. S-22's refund promise in SUP-5601 violates POL-B-REF (agents cannot promise refunds pre-review). Deep Time add-on ($30, TX-9003/INV-2609-AO) is legitimate per POL-B-ADD (added by admin U-2 on 2026-09-12, applied at next renewal 2026-09-14, full price - correct). July upgrade proration INV-2607P $59.60 matches POL-B-PRO formula (149 * 12/30 = 59.6) - correct, matches SUP-5549 conclusion. However CR-778 ($19.60 unused-time credit from that same upgrade, issued 2026-07-02) remains unapplied with owner_notified=false - now >30 days old (it's Sept), auto_apply disabled since SUP-5390 (2026-05-02) - this violates POL-B-CRD which requires flagging unapplied credits >30 days old to owner. This is the one confirmed ACTUAL_ERROR. Ready to draft final report."
+   }
+  ],
+  "source": "record_progress (agent-generated)"
+ },
+ "completed_tool_calls": [
+  {
+   "tool_call_id": "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ",
+   "tool_name": "list_subscription_events",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01QtxCyy1BRVQAXnP4fasoXn",
+   "tool_name": "list_invoices",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01FgWUZZWEmMSewqq9Yv5NAd",
+   "tool_name": "list_payments",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01TpsEynEhMxDUcfgbJLw13z",
+   "tool_name": "get_account",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_0149RSbctpUmXe53d3FCBMHH",
+   "tool_name": "list_account_credits",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_014zKd4YHf2hrfeuRN6ZJVjT",
+   "tool_name": "get_support_history",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_011SGnsJwFiqbyY5qFsAzBYn",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5602"
+   }
+  },
+  {
+   "tool_call_id": "toolu_013agdAvGG3TGhXxfxdNUqnb",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5601"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01AjktYfo7xoTuWuwjTLu8CH",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5549"
+   }
+  },
+  {
+   "tool_call_id": "toolu_018sCvrin6RPu39WTD6FVnPE",
+   "tool_name": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2607P"
+   }
+  },
+  {
+   "tool_call_id": "toolu_014GVTSEmHNXes7h8tX6fgh5",
+   "tool_name": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2609"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01QT8nrQ6qkBdSQsftXA579r",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5390"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01RJjSGBuGhseP6UhQ8GjQQH",
+   "tool_name": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2602"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01LduDwjXbzfKXB9kgPxKHm3",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "add-ons"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01MRUYE1ijwjEwPtZg7756X9",
+   "tool_name": "get_payment_detail",
+   "args": {
+    "payment_id": "TX-9003"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01LFUUpARJkWuefiuqF4kuxh",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "proration"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01Nmn7gTYu1DSjBt29CxaWRn",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "duplicate_charges"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01AqKM9QWUDGG2KhBdUZyErH",
+   "tool_name": "get_payment_detail",
+   "args": {
+    "payment_id": "TX-9001"
+   }
+  },
+  {
+   "tool_call_id": "toolu_015D9ygUdDtU8RsefHcxR4i3",
+   "tool_name": "get_payment_detail",
+   "args": {
+    "payment_id": "TX-9002"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01Rw9fqLoZK8gJVR55aoScYd",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "add_ons"
+   }
+  },
+  {
+   "tool_call_id": "toolu_0138Fx4D9a6sWpLVckEap6Cj",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "refunds"
+   }
+  },
+  {
+   "tool_call_id": "toolu_017Cqj4FS2AA687F7set89Rd",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "authorizations"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01DMYMR9yZrmYM169fwGYJqY",
+   "tool_name": "get_billing_policy",
+   "args": {
+    "topic": "credits"
+   }
+  },
+  {
+   "tool_call_id": "toolu_014idKz41kG36SCaX1dJhdfU",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5601"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01BgR8FEJsYZKSEB7eMBFC7p",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5602"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01TnVAKBEjZQN3Msa6KGe3aX",
+   "tool_name": "get_ticket",
+   "args": {
+    "ticket_id": "SUP-5549"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01JV3LzWza6GVALFusD7PVtQ",
+   "tool_name": "list_account_credits",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01RhR6orRU5dTHe2b1ucJee5",
+   "tool_name": "list_payments",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01Dz5n9CQxv9RVgQjJx6zTPS",
+   "tool_name": "list_invoices",
+   "args": {
+    "customer_id": "C-1042"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01MEGdeTXn9TUNhQHuPEDb5M",
+   "tool_name": "get_payment_detail",
+   "args": {
+    "payment_id": "TX-9001"
+   }
+  },
+  {
+   "tool_call_id": "toolu_01Q3D9Khe9gXUzvRsvKDYc4f",
+   "tool_name": "get_payment_detail",
+   "args": {
+    "payment_id": "TX-9002"
+   }
+  },
+  {
+   "tool_call_id": "toolu_011cTuoVVrfUJQZ9LwnXpUz7",
+   "tool_name": "record_progress",
+   "args": {
+    "thread": "C-1042 billing investigation",
+    "stage": "RECONCILING",
+    "note": "Re-verified all key evidence after compaction: TX-9002 (auth, not_captured, released 2026-09-18) and TX-9001 (settlement, captured) both tie to INV-2609 but represent one logical charge - auth timeout + retry per POL-B-AUTH v1. No duplicate $149 charge occurred. S-22's refund promise in SUP-5601 violates POL-B-REF (agents cannot promise refunds pre-review). Deep Time add-on ($30, TX-9003/INV-2609-AO) is legitimate per POL-B-ADD (added by admin U-2 on 2026-09-12, applied at next renewal 2026-09-14, full price - correct). July upgrade proration INV-2607P $59.60 matches POL-B-PRO formula (149 * 12/30 = 59.6) - correct, matches SUP-5549 conclusion. However CR-778 ($19.60 unused-time credit from that same upgrade, issued 2026-07-02) remains unapplied with owner_notified=false - now >30 days old (it's Sept), auto_apply disabled since SUP-5390 (2026-05-02) - this violates POL-B-CRD which requires flagging unapplied credits >30 days old to owner. This is the one confirmed ACTUAL_ERROR. Ready to draft final report.",
+    "open_questions": []
+   }
+  }
+ ],
+ "memory": [
+  {
+   "entry_id": "pin-SE-1",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-1: event_id=SE-1 date=2025-11-14 type=subscription.created detail=shelf_monthly $49 actor=U-1 source=signup",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-SE-2",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-2: event_id=SE-2 date=2026-03-09 type=seat.added detail=U-2, role admin actor=U-1 source=portal",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-SE-3",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-3: event_id=SE-3 date=2026-03-09 type=seat.added detail=U-3, role member actor=U-1 source=portal",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-SE-4",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-4: event_id=SE-4 date=2026-05-02 type=account.setting_changed detail=auto_apply_credits true -> false, ref SUP-5390 actor=S-17 source=support",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-SE-5",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-5: event_id=SE-5 date=2026-07-02 type=plan.upgraded detail=shelf_monthly -> vault_monthly, effective 2026-07-02, proration true, invoice INV-2607P, credit CR-778 actor=U-1 source=portal",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-SE-6",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-6: event_id=SE-6 date=2026-09-12 type=addon.added detail=deep_time_monthly $30, starts next renewal 2026-09-14 actor=U-2 source=portal",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-SE-7",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SE-7: event_id=SE-7 date=2026-09-14 type=subscription.renewed detail=vault_monthly + deep_time_monthly actor=system source=billing",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_subscription_events",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-C-1042",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "C-1042: customer_id=C-1042 current_plan=vault_monthly ($149) + deep_time_monthly add-on ($30) auto_apply_credits=false auto_apply_changed_ref=SUP-5390 seats.user_id=[\"U-1\",\"U-2\",\"U-3\"] seats.role=[\"owner\",\"admin\",\"member\"] payment_method.last4=1111",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01TpsEynEhMxDUcfgbJLw13z"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_account",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 1
+  },
+  {
+   "entry_id": "pin-CR-512",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "CR-512: credit_id=CR-512 amount=5.0 reason=goodwill source_ref=SUP-5201 status=applied applied_to=INV-2602",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01JV3LzWza6GVALFusD7PVtQ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_account_credits",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 5
+  },
+  {
+   "entry_id": "pin-CR-778",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "CR-778: credit_id=CR-778 amount=19.6 reason=proration_unused_time source_ref=INV-2607P status=unapplied owner_notified=false",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01JV3LzWza6GVALFusD7PVtQ"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.list_account_credits",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 5
+  },
+  {
+   "entry_id": "pin-SUP-5602",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "obligation",
+   "text": "SUP-5602: ticket_id=SUP-5602 status=open opened_at=2026-09-16 subject=Escalation: C-1042 billing review open_obligations=[\"decide on refund promised in SUP-5601\",\"answer Deep Time Analytics add-on question\",\"review July upgrade question\"]",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01BgR8FEJsYZKSEB7eMBFC7p"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_ticket",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 5
+  },
+  {
+   "entry_id": "pin-SUP-5601",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "obligation",
+   "text": "SUP-5601: ticket_id=SUP-5601 status=escalated opened_at=2026-09-15 subject=Charged twice + unknown Deep Time Analytics charge commitments_made=[\"refund $149 within 5-7 business days\"] agent_conclusion=duplicate charge open_obligations=[\"Deep Time Analytics question escalated\"]",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_014idKz41kG36SCaX1dJhdfU"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_ticket",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 5
+  },
+  {
+   "entry_id": "pin-SUP-5549",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SUP-5549: ticket_id=SUP-5549 status=resolved opened_at=2026-08-06 subject=Question about upgrade charge agent_conclusion=no credit due",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01TnVAKBEjZQN3Msa6KGe3aX"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_ticket",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 5
+  },
+  {
+   "entry_id": "pin-INV-2607P",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "INV-2607P: invoice_id=INV-2607P issued_at=2026-07-02 period_start=2026-07-02 period_end=2026-07-13 lines=[{\"description\":\"Vault Plan: unlimited centuries, prorated 12 of 30 days\",\"amount\":59.6}] total=59.6 memo=Unused time on your previous plan is issued as account credit.",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_018sCvrin6RPu39WTD6FVnPE"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_invoice",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 2
+  },
+  {
+   "entry_id": "pin-INV-2609",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "INV-2609: invoice_id=INV-2609 issued_at=2026-09-14 period_start=2026-09-14 period_end=2026-10-13 lines=[{\"description\":\"Vault Plan: unlimited centuries, climate-controlled\",\"amount\":149.0}] total=149.0",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_014GVTSEmHNXes7h8tX6fgh5"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_invoice",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 2
+  },
+  {
+   "entry_id": "pin-SUP-5390",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "SUP-5390: ticket_id=SUP-5390 status=resolved opened_at=2026-05-02 subject=Please stop auto-applying credits commitments_made=[\"credits remain on account until customer requests application\"] agent_conclusion=auto-apply disabled at customer request",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01QT8nrQ6qkBdSQsftXA579r"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_ticket",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 2
+  },
+  {
+   "entry_id": "pin-INV-2602",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "INV-2602: invoice_id=INV-2602 issued_at=2026-02-14 period_start=2026-02-14 period_end=2026-03-13 lines=[{\"description\":\"Shelf Plan: a modest shelf in the stacks\",\"amount\":49.0}] total=49.0 credits_applied=[{\"credit_id\":\"CR-512\",\"amount\":5.0}]",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01RJjSGBuGhseP6UhQ8GjQQH"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_invoice",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 2
+  },
+  {
+   "entry_id": "pin-TX-9003",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "TX-9003: payment_id=TX-9003 record_type=settlement capture_status=captured amount=30.0 created_at=2026-09-14T10:03:02Z settled_at=2026-09-15 invoice_id=INV-2609-AO",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01MRUYE1ijwjEwPtZg7756X9"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_payment_detail",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 3
+  },
+  {
+   "entry_id": "pin-POL-B-PRO",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "POL-B-PRO: policy_id=POL-B-PRO version=3 rule=Mid-cycle upgrade: the new plan is charged price x remaining_days / period_days on an immediate invoice. Unused time on the old plan is issued as an account credit at the same ratio; it is not an invoice line.",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01LFUUpARJkWuefiuqF4kuxh"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_billing_policy",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-1",
+   "created_step": 3
+  },
+  {
+   "entry_id": "pin-TX-9001",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "TX-9001: payment_id=TX-9001 record_type=settlement capture_status=captured amount=149.0 created_at=2026-09-14T10:02:49Z settled_at=2026-09-15 linked_payment_id=TX-9002 invoice_id=INV-2609",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01MEGdeTXn9TUNhQHuPEDb5M"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_payment_detail",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 7
+  },
+  {
+   "entry_id": "pin-TX-9002",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "TX-9002: payment_id=TX-9002 record_type=authorization capture_status=not_captured amount=149.0 created_at=2026-09-14T10:02:11Z released_at=2026-09-18 linked_payment_id=TX-9001 invoice_id=INV-2609 gateway_event=capture_timeout; retried as TX-9001",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01Q3D9Khe9gXUzvRsvKDYc4f"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_payment_detail",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 7
+  },
+  {
+   "entry_id": "pin-POL-B-AUTH",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "POL-B-AUTH: policy_id=POL-B-AUTH version=1 rule=An authorization is a temporary hold, not a charge. On capture timeout the gateway retries; the uncaptured authorization is released within 3-5 business days. A released authorization is not refundable: no funds were captured.",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_017Cqj4FS2AA687F7set89Rd"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_billing_policy",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 4
+  },
+  {
+   "entry_id": "pin-POL-B-CRD",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "POL-B-CRD: policy_id=POL-B-CRD version=2 rule=Credits auto-apply to the next invoice unless auto-apply is disabled. With auto-apply disabled, unapplied credits older than 30 days must be flagged to the account owner (owner_notified=true) and applied or refunded at the owner's instruction.",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01DMYMR9yZrmYM169fwGYJqY"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_billing_policy",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 4
+  },
+  {
+   "entry_id": "pin-POL-B-ADD",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "POL-B-ADD: policy_id=POL-B-ADD version=1 rule=Add-ons may be added by the owner or any admin seat. Added mid-cycle, they start at the next renewal and are invoiced separately at full monthly price.",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_01Rw9fqLoZK8gJVR55aoScYd"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_billing_policy",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 4
+  },
+  {
+   "entry_id": "pin-POL-B-REF",
+   "class": "MUST_PERSIST",
+   "source": "evidence_pin",
+   "entry_kind": "fact",
+   "text": "POL-B-REF: policy_id=POL-B-REF version=1 rule=Refunds and credit applications require billing-specialist approval. Support agents may not promise a refund before billing review.",
+   "sigma": {
+    "tool_call_ids": [
+     "toolu_0138Fx4D9a6sWpLVckEap6Cj"
+    ]
+   },
+   "support": "tool_return",
+   "governor_corroborated": "yes",
+   "rule": "P.evidence_pins.get_billing_policy",
+   "stored": true,
+   "exposed": true,
+   "exposure_reason": "P.must_persist",
+   "created_compaction": "cmp-2",
+   "created_step": 4
+  }
+ ],
+ "summary_version": 2,
+ "summary_text": "Investigation into C-1042's billing dispute (SUP-5601/5602) is essentially complete after re-verification post-compaction. Gathered/confirmed all account, subscription, invoice, payment, credit, ticket, and policy data. Conclusions: (1) The apparent \"duplicate\" $149 charge on 9/14 was actually one authorization (TX-9002) that timed out and was retried/captured as TX-9001; auth released 2026-09-18, no funds double-charged - S-22's refund promise in SUP-5601 improperly violated POL-B-REF (no pre-review refund promises). (2) The $30 Deep Time Analytics add-on (TX-9003/INV-2609-AO) is legitimate per POL-B-ADD - added by admin U-2, charged full price at next renewal. (3) July upgrade proration INV-2607P ($59.60) correctly matches POL-B-PRO formula. (4) The one confirmed actual error: credit CR-778 ($19.60, issued 2026-07-02, unapplied, owner_notified=false) is now >30 days old with auto-apply disabled, violating POL-B-CRD's flagging requirement. Ready to draft final report to close SUP-5602's open obligations.}",
+ "unresolved_questions": [],
+ "open_obligations": [
+  "SUP-5602: ticket_id=SUP-5602 status=open opened_at=2026-09-16 subject=Escalation: C-1042 billing review open_obligations=[\"decide on refund promised in SUP-5601\",\"answer Deep Time Analytics add-on question\",\"review July upgrade question\"]",
+  "SUP-5601: ticket_id=SUP-5601 status=escalated opened_at=2026-09-15 subject=Charged twice + unknown Deep Time Analytics charge commitments_made=[\"refund $149 within 5-7 business days\"] agent_conclusion=duplicate charge open_obligations=[\"Deep Time Analytics question escalated\"]"
+ ],
+ "simulated_effects_so_far": [],
+ "interventions_so_far": [],
+ "governor": {
+  "session_ids": [
+   "01a0d9c9-e552-7158-b0d0-d4474d52f31a",
+   "01a0d9ca-1131-76f7-9b3a-ebc103c9abb3",
+   "01a0d9ca-784e-752f-af59-524a5749ef27"
+  ],
+  "last_event_sequence_number": 73,
+  "scope_asserted_tool_use_ids": [
+   "toolu_011SGnsJwFiqbyY5qFsAzBYn",
+   "toolu_011cTuoVVrfUJQZ9LwnXpUz7",
+   "toolu_0138Fx4D9a6sWpLVckEap6Cj",
+   "toolu_013agdAvGG3TGhXxfxdNUqnb",
+   "toolu_0149RSbctpUmXe53d3FCBMHH",
+   "toolu_014GVTSEmHNXes7h8tX6fgh5",
+   "toolu_014idKz41kG36SCaX1dJhdfU",
+   "toolu_014zKd4YHf2hrfeuRN6ZJVjT",
+   "toolu_015D9ygUdDtU8RsefHcxR4i3",
+   "toolu_017Cqj4FS2AA687F7set89Rd",
+   "toolu_018sCvrin6RPu39WTD6FVnPE",
+   "toolu_01AjktYfo7xoTuWuwjTLu8CH",
+   "toolu_01AqKM9QWUDGG2KhBdUZyErH",
+   "toolu_01BgR8FEJsYZKSEB7eMBFC7p",
+   "toolu_01DMYMR9yZrmYM169fwGYJqY",
+   "toolu_01Dz5n9CQxv9RVgQjJx6zTPS",
+   "toolu_01FgWUZZWEmMSewqq9Yv5NAd",
+   "toolu_01JV3LzWza6GVALFusD7PVtQ",
+   "toolu_01LFUUpARJkWuefiuqF4kuxh",
+   "toolu_01LduDwjXbzfKXB9kgPxKHm3",
+   "toolu_01MEGdeTXn9TUNhQHuPEDb5M",
+   "toolu_01MRUYE1ijwjEwPtZg7756X9",
+   "toolu_01Nmn7gTYu1DSjBt29CxaWRn",
+   "toolu_01Q3D9Khe9gXUzvRsvKDYc4f",
+   "toolu_01QT8nrQ6qkBdSQsftXA579r",
+   "toolu_01QtxCyy1BRVQAXnP4fasoXn",
+   "toolu_01RJjSGBuGhseP6UhQ8GjQQH",
+   "toolu_01RhR6orRU5dTHe2b1ucJee5",
+   "toolu_01Rw9fqLoZK8gJVR55aoScYd",
+   "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ",
+   "toolu_01TnVAKBEjZQN3Msa6KGe3aX",
+   "toolu_01TpsEynEhMxDUcfgbJLw13z"
+  ]
+ },
+ "resumed_from": null
+}

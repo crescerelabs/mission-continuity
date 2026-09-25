@@ -74,5 +74,20 @@
    "dev4-governed-t11000-stub150"
   ]
  },
- "amendments": []
+ "amendments": [
+  {
+   "date": "2026-09-25 (after the six preregistered runs, before these runs)",
+   "approved_by": "operator, in chat",
+   "arm": "E1x",
+   "label": "EXPLORATORY REPLICATION (not part of the preregistered comparison)",
+   "runs": {
+    "baseline": 2,
+    "governed": 2,
+    "fault_injection": "none"
+   },
+   "configuration": "identical to the frozen configuration above",
+   "purpose": "check whether behaviors observed once in the n=1 natural arm (for example baseline contact_customer after compaction) recur",
+   "reporting": "reported separately; the six preregistered runs and their results are unchanged; no run is replaced or discarded"
+  }
+ ]
 }

@@ -1,0 +1,2 @@
+{"ts": "2026-09-25T18:21:18Z", "kind": "application_intervention", "type": "fault_injection", "actor": "application", "run_step": 5, "compaction_id": "cmp-1", "fault": "FI-1"}
+{"ts": "2026-09-25T18:21:50Z", "kind": "application_intervention", "type": "fault_injection", "actor": "application", "run_step": 9, "compaction_id": "cmp-2", "fault": "FI-1"}

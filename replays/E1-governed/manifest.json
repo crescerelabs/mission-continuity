@@ -1,0 +1,29 @@
+{
+ "label": "E1-governed",
+ "arm": "E1",
+ "mode": "governed",
+ "fault_injection": "none",
+ "app_commit": "424b6dc",
+ "kernel_sha256": "2df347fbf2c8c581f7f09fe46e249ba76b81afbea80b4489111724be414db145",
+ "dataset_sha256": "91aedded4831e87ad70cae945208515df04fd4325cff2cab3209812af5eb1d3f",
+ "policy_sha256": "dc417d1b295cdd715f823fa76cef33606bf32c5a926c43c70dc025c0fe271357",
+ "leak_scan": "0 values found",
+ "files": {
+  "run/archive/cmp-1.json": "6374e845fb58df9454de72b5e348894c832cbbd8e741368351c97f0c23c7666d",
+  "run/archive/cmp-2.json": "2a8af8903fdc10ec1881b550b2c19d68010271f3716fcef910a3ad27cd9b2541",
+  "run/checkpoints/ckpt-cmp-1.json": "046730f60443585bf62d5226ef7e9927efdc9fd90d66676d01fe116d181cf158",
+  "run/checkpoints/ckpt-cmp-2.json": "6db2f6212fceaee141f506d2ff2b467fd294e3684390fabcd06a38cfe7d8310a",
+  "run/compactions.jsonl": "0d3bd80b9ca9c67869d93aa20fc50e23a3a2d11158c2dfb6a98ea8c68ee4108b",
+  "run/memory.jsonl": "4b961358b03973d7323101e419bbfd7d727c766864c1e29cacd76688cc08cbbe",
+  "run/notes.jsonl": "d18905602d4dab270c82f9dfbf6344225a7e14c9c8cee223e414325581c3fb61",
+  "run/report.json": "f056ce84f1e5080cc515098e44ba1ec1ff10cf0e716d57722a286de90dcb7c4f",
+  "run/requests.jsonl": "79b332ae9512b62983f0bdce15e12c2d55dc9d5aace61e2c6293fbed1de5f5ec",
+  "run/results.json": "282b2e885a5f3bda61eccb9bf511bb74c90cdd73555b9b19667de484a4e42d16",
+  "run/run.json": "f941f8bc6ad7c179fe5801a76dfac384357a2558f7235ef2a5864a609f7e1cd4",
+  "run/runner.log": "2facf681c62dacad00484a021dcca80ab2c61658a27ac84afeba182f9d3f850d",
+  "run/tools.jsonl": "e46fc05a97b8a5ca51249b71f8d2bfffe0080f6f7f3be1c557845c61ea0b8b89",
+  "traces/01a0d9c9-e552-7158-b0d0-d4474d52f31a.jsonl": "dc6b94d10120b322ae5d8b282045936484ac8b21aa32e1475b771c3ddd0994df",
+  "traces/01a0d9ca-1131-76f7-9b3a-ebc103c9abb3.jsonl": "83c3668c3808a49acd8ffeaa093fa4c83fd67d7768b6c99bf2a2465ffdc8d7c3",
+  "traces/01a0d9ca-784e-752f-af59-524a5749ef27.jsonl": "8a222dd5199e3afb94765f01edf41a09f57ab7d8d86c29922ca753941c8ee122"
+ }
+}

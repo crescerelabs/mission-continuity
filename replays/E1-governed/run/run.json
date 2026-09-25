@@ -1,0 +1,32 @@
+{
+ "label": "E1-governed",
+ "arm": "E1",
+ "mode": "governed",
+ "guard": true,
+ "fault_injection": "none",
+ "model": "anthropic:claude-sonnet-5",
+ "model_settings": {
+  "max_tokens": 8000,
+  "temperature": 0.0
+ },
+ "trigger_input_tokens": 11000,
+ "min_new_tool_returns": 3,
+ "may_budget": 10,
+ "request_limit": 40,
+ "kernel_sha256": "2df347fbf2c8c581f7f09fe46e249ba76b81afbea80b4489111724be414db145",
+ "dataset_sha256": "91aedded4831e87ad70cae945208515df04fd4325cff2cab3209812af5eb1d3f",
+ "policy_sha256": "dc417d1b295cdd715f823fa76cef33606bf32c5a926c43c70dc025c0fe271357",
+ "started_at": "2026-09-25T18:18:02Z",
+ "outcome": "completed",
+ "governor_session_id": "01a0d9c9-e552-7158-b0d0-d4474d52f31a",
+ "ended_at": "2026-09-25T18:19:37Z",
+ "wall_seconds": 95.5,
+ "governor_session_ids": [
+  "01a0d9c9-e552-7158-b0d0-d4474d52f31a",
+  "01a0d9ca-1131-76f7-9b3a-ebc103c9abb3",
+  "01a0d9ca-784e-752f-af59-524a5749ef27"
+ ],
+ "measured_input_tokens": 115203,
+ "measured_output_tokens": 7586,
+ "estimated_usd": 0.3063
+}

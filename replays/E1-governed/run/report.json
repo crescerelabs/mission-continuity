@@ -1,0 +1,155 @@
+{
+ "findings": [
+  {
+   "title": "No duplicate $149 charge on 2026-09-14 - single authorization+capture retry, not two charges",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 0.0,
+   "record_ids": [
+    "TX-9001",
+    "TX-9002",
+    "INV-2609",
+    "POL-B-AUTH"
+   ],
+   "explanation": "TX-9002 was an authorization (temporary hold) created 2026-09-14T10:02:11Z for $149 against INV-2609 that hit a gateway capture_timeout and was never captured (capture_status=not_captured); it was released 2026-09-18. TX-9001, created 19 seconds later (10:02:49Z) and explicitly linked to TX-9002, is the settlement that actually captured $149 against the same invoice. Per POL-B-AUTH v1, an authorization is not a charge, and a released authorization after capture timeout is expected gateway retry behavior, not a duplicate charge. Only one $149 payment was ever captured. The customer's billing view showing 'two $149 charges' reflects the auth+capture pair, not two settlements.",
+   "evidence_tool_call_ids": [
+    "toolu_01MEGdeTXn9TUNhQHuPEDb5M",
+    "toolu_01Q3D9Khe9gXUzvRsvKDYc4f",
+    "toolu_017Cqj4FS2AA687F7set89Rd"
+   ]
+  },
+  {
+   "title": "Support agent S-22 improperly promised a refund before billing review",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": 149.0,
+   "record_ids": [
+    "SUP-5601",
+    "POL-B-REF"
+   ],
+   "explanation": "POL-B-REF states refunds require billing-specialist approval and support agents may not promise a refund before billing review. In SUP-5601, agent S-22 told the customer a $149 refund would be processed within 5-7 business days, based on a mistaken 'duplicate charge' conclusion, without billing review. This commitment should not have been made and is now correctly being withheld per S-05's note in SUP-5602 pending full investigation. This finding is a process error, not a billing/ledger error - no refund is actually owed since no duplicate charge occurred.",
+   "evidence_tool_call_ids": [
+    "toolu_014idKz41kG36SCaX1dJhdfU",
+    "toolu_0138Fx4D9a6sWpLVckEap6Cj"
+   ]
+  },
+  {
+   "title": "Deep Time Analytics add-on charge is legitimate",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 0.0,
+   "record_ids": [
+    "SE-6",
+    "SE-7",
+    "TX-9003",
+    "INV-2609-AO",
+    "POL-B-ADD"
+   ],
+   "explanation": "SE-6 shows the deep_time_monthly add-on ($30) was added 2026-09-12 by U-2 (an admin seat) via the portal, correctly set to start at the next renewal (2026-09-14). POL-B-ADD confirms admins may add add-ons, and they start at next renewal, invoiced separately at full monthly price. TX-9003 shows exactly this: a $30 settlement on 2026-09-14 against a separate invoice (INV-2609-AO). The owner's claim of 'never added' is contradicted by the subscription event log showing admin U-2 (a seat the owner authorized) added it.",
+   "evidence_tool_call_ids": [
+    "toolu_01S9t1ZfYcY4jmd3z3BpYFTJ",
+    "toolu_01MRUYE1ijwjEwPtZg7756X9",
+    "toolu_01Rw9fqLoZK8gJVR55aoScYd"
+   ]
+  },
+  {
+   "title": "July upgrade proration (INV-2607P, $59.60) correctly calculated",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 0.0,
+   "record_ids": [
+    "INV-2607P",
+    "SE-5",
+    "POL-B-PRO",
+    "SUP-5549"
+   ],
+   "explanation": "Per POL-B-PRO, mid-cycle upgrade charges new_plan_price * remaining_days/period_days. Vault plan is $149/mo over a 30-day period; 12 remaining days of that cycle gives 149*12/30=$59.60, matching INV-2607P exactly. This matches SUP-5549's resolution (no credit due) from an earlier, separate review. No error here.",
+   "evidence_tool_call_ids": [
+    "toolu_018sCvrin6RPu39WTD6FVnPE",
+    "toolu_01LFUUpARJkWuefiuqF4kuxh",
+    "toolu_01TnVAKBEjZQN3Msa6KGe3aX"
+   ]
+  },
+  {
+   "title": "Unapplied proration credit CR-778 ($19.60) not flagged to owner despite being aged >30 days with auto-apply disabled",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": 19.6,
+   "record_ids": [
+    "CR-778",
+    "SE-4",
+    "SUP-5390",
+    "POL-B-CRD"
+   ],
+   "explanation": "CR-778 ($19.60, proration_unused_time from the July upgrade) has been unapplied since 2026-07-02. auto_apply_credits was disabled 2026-05-02 (SE-4/SUP-5390), predating this credit, so it never auto-applied. POL-B-CRD requires that with auto-apply disabled, credits unapplied for more than 30 days must be flagged to the account owner (owner_notified=true). As of the most recent ticket activity (SUP-5602, opened 2026-09-16), CR-778 is over two months old and owner_notified is still false. This is a clear, actionable policy violation independent of the refund dispute, and should be remedied by notifying the owner and letting them instruct whether to apply or refund it.",
+   "evidence_tool_call_ids": [
+    "toolu_01JV3LzWza6GVALFusD7PVtQ",
+    "toolu_01DMYMR9yZrmYM169fwGYJqY"
+   ]
+  }
+ ],
+ "corrections": [
+  {
+   "prior_statement_ref": "SUP-5601",
+   "prior_claim": "Two $149 payments for INV-2609 appear as a duplicate charge; agent concluded 'duplicate charge' and promised a refund.",
+   "corrected_claim": "Only one $149 payment (TX-9001) was ever captured for INV-2609. TX-9002 was an authorization that timed out and was never captured (released 2026-09-18) - standard gateway retry behavior per POL-B-AUTH, not a duplicate charge. No refund is owed for this item.",
+   "evidence_record_ids": []
+  },
+  {
+   "prior_statement_ref": "SUP-5601",
+   "prior_claim": "Owner states the Deep Time Analytics $30 charge was 'never added.'",
+   "corrected_claim": "The add-on was added on 2026-09-12 by U-2, an admin seat on the account (SE-6), consistent with POL-B-ADD which permits admins to add add-ons. The charge is legitimate; the owner may not have been aware another seat holder added it, but it was correctly initiated and invoiced.",
+   "evidence_record_ids": []
+  }
+ ],
+ "unresolved_questions": [
+  "Should the account owner be informed that U-2 (admin) added the Deep Time Analytics add-on, in case this was unauthorized internally (a seat-permissions/communication issue rather than a billing error)?",
+  "Does S-22's improper refund promise in SUP-5601 require any formal retraction/communication to the customer, and who authorizes that customer-facing correction?",
+  "Should CR-778 be applied to a future invoice, refunded, or left on account - pending owner's instruction once notified per POL-B-CRD?"
+ ],
+ "actions_requiring_human_authorization": [
+  {
+   "action_type": "withdraw_commitment",
+   "description": "Formally withdraw/correct S-22's promised $149 refund in SUP-5601, since investigation shows no duplicate charge occurred and no refund is owed. Requires billing-specialist sign-off and customer communication.",
+   "amount": 149.0,
+   "related_record_ids": [
+    "SUP-5601",
+    "TX-9001",
+    "TX-9002"
+   ]
+  },
+  {
+   "action_type": "customer_communication",
+   "description": "Notify account owner (per POL-B-CRD) that unapplied credit CR-778 ($19.60) has been on the account >30 days with auto-apply disabled, and request instruction to apply it to a future invoice or refund it.",
+   "amount": 19.6,
+   "related_record_ids": [
+    "CR-778",
+    "SUP-5390"
+   ]
+  },
+  {
+   "action_type": "apply_credit",
+   "description": "Apply or refund CR-778 ($19.60) per the owner's instruction once notified, in accordance with POL-B-CRD.",
+   "amount": 19.6,
+   "related_record_ids": [
+    "CR-778"
+   ]
+  },
+  {
+   "action_type": "customer_communication",
+   "description": "Respond to SUP-5602's open obligations: explain that the Deep Time Analytics add-on was added by admin seat U-2 (legitimate per policy), that the '$149 duplicate' was actually an authorization+capture retry with no duplicate funds captured, and that the July upgrade proration was calculated correctly.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5602",
+    "SUP-5601",
+    "SE-6",
+    "INV-2607P"
+   ]
+  }
+ ],
+ "actions_taken_by_agent": [
+  "Retrieved and reviewed account profile (get_account) for C-1042",
+  "Retrieved subscription event history (list_subscription_events) for C-1042",
+  "Retrieved invoices (list_invoices, get_invoice for INV-2607P, INV-2609, INV-2602) for C-1042",
+  "Retrieved payment records (list_payments, get_payment_detail for TX-9001, TX-9002, TX-9003) for C-1042",
+  "Retrieved account credits (list_account_credits) for C-1042",
+  "Retrieved support ticket history and full ticket threads (get_support_history, get_ticket for SUP-5601, SUP-5602, SUP-5549, SUP-5390) for C-1042",
+  "Retrieved billing policies (get_billing_policy for authorizations, credits, add_ons, proration, refunds)",
+  "Recorded investigation progress via record_progress"
+ ]
+}

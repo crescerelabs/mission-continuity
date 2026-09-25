@@ -84,6 +84,61 @@ def _cmd_run(args) -> int:
     return proc.returncode
 
 
+def _cmd_bundle(args) -> int:
+    from mission_continuity.bundle import make_bundle, verify
+    for label in args.labels:
+        dst = make_bundle(label)
+        print(f"{dst.relative_to(REPO)}: {verify(dst)}")
+    return 0
+
+
+def _cmd_verify_bundle(args) -> int:
+    from pathlib import Path
+    from mission_continuity.bundle import verify
+    r = verify(Path(args.path))
+    print(json.dumps(r))
+    return 0 if r["ok"] else 1
+
+
+def _cmd_summarize(args) -> int:
+    from mission_continuity.store import RunStore
+    rows = []
+    for label in args.labels:
+        if not (run_dir(label) / "results.json").exists():
+            print(f"skipping {label}: not evaluated", file=sys.stderr)
+            continue
+        r = RunStore(label).read_json("results.json")
+        cmp_ = r["compactions"]
+        rows.append({
+            "label": label, "arm": r["arm"], "mode": r["mode"], "failure_kind": r["failure_kind"],
+            "outcome": r["outcome"], "score": r["correctness"]["score"],
+            **{k: r["correctness"][k] for k in ("R1", "R2", "R3", "R4", "R5")},
+            "compactions": len(cmp_),
+            "reduction_pct": [c["counted"].get("reduction_pct") for c in cmp_ if c.get("counted")],
+            "tokens_saved": [c["counted"].get("tokens_saved") for c in cmp_ if c.get("counted")],
+            "cf_missing": sorted({x for c in cmp_ for x in c["cf_missing"]}),
+            "kernel_terms_missing": sorted({x for c in cmp_ for x in c["kernel_terms_missing"]}),
+            "prohibited_attempts": len(r["authorization"]["prohibited_dispatches"]),
+            "governor_flagged": r["authorization"]["governor_flagged"],
+            "governor_unflagged": r["authorization"]["governor_unflagged"],
+            "simulated_effects": r["authorization"]["simulated_effects"],
+            "guard_denials": r["authorization"]["guard_denials"],
+            "repeated_retrievals": r["repeated_tool_calls_after_compaction"],
+            "input_tokens": r["cost"]["input_tokens"], "output_tokens": r["cost"]["output_tokens"],
+            "summarizer_tokens": r["cost"]["summarizer_input_tokens"] + r["cost"]["summarizer_output_tokens"],
+            "estimated_usd": r["cost"]["estimated_usd"], "wall_seconds": r["cost"]["wall_seconds"],
+            "tool_joins": f'{r["evidence_integrity"]["tool_calls_joined"]}/{r["evidence_integrity"]["tool_calls"]}',
+            "token_joins": f'{r["evidence_integrity"]["token_snapshots_joined"]}/{r["evidence_integrity"]["model_responses"]}',
+            "leaks": r["leak_scan"]["leaks"],
+            "floor_ok": r.get("floor_check", {}).get("all_ok"),
+            "consecutive_compactions": r.get("floor_check", {}).get("consecutive_compactions"),
+        })
+    out = REPO / "experiment" / "results_summary.json"
+    out.write_text(json.dumps(rows, indent=1))
+    print(json.dumps(rows, indent=1))
+    return 0
+
+
 def _cmd_evaluate(args) -> int:
     from mission_continuity.evaluate import evaluate
     r = evaluate(args.label)
@@ -111,6 +166,18 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("spend", help="Governor-measured tokens and estimated spend")
     p.set_defaults(func=_cmd_spend)
+
+    p = sub.add_parser("bundle", help="Package recorded runs as hash-verified replay bundles")
+    p.add_argument("labels", nargs="+")
+    p.set_defaults(func=_cmd_bundle)
+
+    p = sub.add_parser("verify-bundle", help="Recompute a replay bundle's hashes")
+    p.add_argument("path")
+    p.set_defaults(func=_cmd_verify_bundle)
+
+    p = sub.add_parser("summarize", help="Write experiment/results_summary.json from evaluated runs")
+    p.add_argument("labels", nargs="+")
+    p.set_defaults(func=_cmd_summarize)
 
     p = sub.add_parser("evaluate", help="Evaluate one run (writes results.json)")
     p.add_argument("label")
