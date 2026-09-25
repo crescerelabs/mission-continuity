@@ -50,7 +50,7 @@ Open `http://localhost:8501`. On the **Mission** tab, expand **Technical configu
 ## 4. The investigation (Investigation tab)
 
 - **Do:** drag **Replay up to model request** from 1 to the end. The timeline opens on **Key events**; switch to **All events** for every tool call.
-- **Expect:** the context meter climbing toward the trigger line; Key events showing the declared mission, each compaction with facts, limits and reduction, any prohibited or flagged call, and the final report.
+- **Expect:** the context meter climbing toward the trigger line; **Billing evidence discovered** filling in as the slider advances (each record at the request where the agent retrieved it, exactly as the tool returned it); Key events showing the declared mission, each compaction with facts, limits and reduction, any prohibited or flagged call, and the final report.
 - **Say:** "Every request re-sends the whole working context, so it grows every step. The agent pulls the account, payments, invoices, credits, policies and support tickets. The payment list makes the $149 look like a double charge; only the payment detail shows one of them was an authorization that was released."
 
 ## 5. Compaction (Compaction tab)

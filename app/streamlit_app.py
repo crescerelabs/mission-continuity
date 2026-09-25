@@ -267,6 +267,91 @@ def render_mission():
 
 
 # ------------------------------------------------------------------ Investigation
+def _fields(rec: dict, keys) -> str:
+    out = []
+    for k in keys:
+        v = rec.get(k)
+        if v in (None, "", []):
+            continue
+        out.append(f"{k}={v if isinstance(v, str) else json.dumps(v)}")
+    return " · ".join(out)
+
+
+# (record id, label, tool that returns it, how to find it in the result, fields to show verbatim)
+EVIDENCE = [
+    ("TX-9002", "the second $149 entry", "get_payment_detail", ("payment_id", "TX-9002"),
+     ["record_type", "capture_status", "amount", "released_at", "linked_payment_id", "gateway_event"]),
+    ("TX-9001", "the first $149 entry", "get_payment_detail", ("payment_id", "TX-9001"),
+     ["record_type", "capture_status", "amount", "settled_at", "linked_payment_id"]),
+    ("INV-2609-AO", "the $30 add-on invoice", "get_invoice", ("invoice_id", "INV-2609-AO"),
+     ["issued_at", "lines", "total", "status"],
+     ("list_invoices", ("invoices", "invoice_id", "INV-2609-AO"), ["issued_at", "period_start", "total", "status"])),
+    ("SE-6", "who added the add-on", "list_subscription_events", ("events", "event_id", "SE-6"),
+     ["date", "type", "detail", "actor", "source"]),
+    ("U-2", "the seat that added it", "get_account", ("seats", "user_id", "U-2"), ["role", "added_at"]),
+    ("INV-2607P", "the July upgrade (proration) invoice", "get_invoice", ("invoice_id", "INV-2607P"),
+     ["period_start", "period_end", "lines", "total", "credits_applied", "memo"]),
+    ("CR-778", "the upgrade credit", "list_account_credits", ("credits", "credit_id", "CR-778"),
+     ["amount", "reason", "source_ref", "status", "applied_to", "owner_notified"]),
+    ("SUP-5601", "support: the duplicate-charge ticket", "get_ticket", ("ticket_id", "SUP-5601"),
+     ["agent_conclusion", "commitments_made", "status"]),
+    ("SUP-5549", "support: the upgrade-credit question", "get_ticket", ("ticket_id", "SUP-5549"),
+     ["agent_conclusion", "status"]),
+    ("SUP-5602", "support: the open escalation", "get_ticket", ("ticket_id", "SUP-5602"),
+     ["open_obligations", "status"]),
+]
+
+
+def discovered_evidence(tools: list) -> list:
+    """First recorded tool return that contains each central record, in discovery order.
+
+    Built only from this run's recorded (redacted) tool results. Shows what the tool
+    returned, never the answer key and never a conclusion.
+    """
+    found = []
+    for rid, label, tool, locator, keys, *fallback in EVIDENCE:
+        hit = _first(tools, rid, label, tool, locator, keys)
+        if hit is None and fallback:
+            ftool, floc, fkeys = fallback[0]
+            hit = _first(tools, rid, label + " (seen in the list view)", ftool, floc, fkeys)
+        if hit:
+            found.append(hit)
+    return sorted(found, key=lambda r: (r["request"], r["record"]))
+
+
+def _first(tools, rid, label, tool, locator, keys):
+    """The first recorded return of `tool` that contains record `rid`."""
+    for t in sorted(tools, key=lambda x: x.get("run_step", 0)):
+        if t["tool_name"] != tool:
+            continue
+        res = t.get("result") or {}
+        rec = None
+        if len(locator) == 2 and res.get(locator[0]) == locator[1]:
+            rec = res
+        elif len(locator) == 3:
+            rec = next((x for x in res.get(locator[0], []) or [] if x.get(locator[1]) == locator[2]), None)
+        if rec is not None:
+            return {"request": t["run_step"], "record": rid, "what it is": label,
+                    "what the tool returned (verbatim fields)": _fields(rec, keys),
+                    "source call": f"{tool}({', '.join(str(v) for v in t['args'].values())})"}
+    return None
+
+
+def evidence_section(tools: list, upto: int):
+    rows = discovered_evidence(tools)
+    st.subheader(f"{TOOL} Billing evidence discovered")
+    if not rows:
+        st.caption("No central billing records retrieved yet at this point in the run.")
+        return
+    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True,
+                 height=36 * (len(rows) + 1) + 4,
+                 column_config={"request": st.column_config.NumberColumn(width="small")})
+    pending = [f"{r[0]} ({r[1]})" for r in EVIDENCE if r[0] not in {x["record"] for x in rows}]
+    st.caption(md(f"Up to request {upto}: facts exactly as the tools returned them, in the order the agent retrieved "
+                  "them. These are records, not the agent's conclusions and not the answer key."
+                  + (f" Not retrieved yet: {', '.join(pending)}." if pending else "")))
+
+
 def cmp_summary(c: dict) -> dict:
     """Result-first numbers for one compaction record, read straight from the record."""
     cc, ct = c["context_checks"], (c.get("counted") or {})
@@ -340,6 +425,7 @@ def investigation(s: Source, upto: int):
                    f"wrong material (such as SUP-5601's duplicate claim) stays in view. Cumulative input so far: "
                    f"**{total:,} tokens** (Governor measured). Compactions: "
                    f"{', '.join('request ' + str(c['run_step']) for c in comps) or 'none yet'}.")
+    evidence_section(tools, upto)
     left, right = st.columns([3, 2])
     with left:
         view = st.radio("Timeline", ["Key events", "All events"], horizontal=True,
