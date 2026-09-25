@@ -24,7 +24,7 @@ import streamlit as st
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from mission_continuity import dataset, keys, reconstruct  # noqa: E402
+from mission_continuity import dataset, keys, reconstruct, resummarize  # noqa: E402
 from mission_continuity.bundle import verify  # noqa: E402
 from mission_continuity.kernel import load_kernel  # noqa: E402
 from mission_continuity.paths import REPLAYS, RUNS, TRACE_DIR  # noqa: E402
@@ -594,11 +594,78 @@ def result_banner(c: dict):
         st.caption("Missing from the next request: " + ", ".join(m["facts_missing"] + m["limits_missing"]))
 
 
+def offline_resummary(s: Source, c: dict):
+    """Exploratory, offline: the same archived input summarized by a local Liquid model. Never sent to any agent."""
+    r = resummarize.available(s.label, c["compaction_id"]) if s.replay else None
+    if not r:
+        return
+    with st.expander("Exploratory, offline: same archived input, different summarizer (Liquid AI, on this laptop)"):
+        st.warning("The recorded agent never received the Liquid summary. It was produced afterwards, on this laptop, "
+                   "from this compaction's archived input, with the same instructions, output schema, caps and token "
+                   "limit. It did not affect the recorded investigation or any recorded result, and it has no Governor "
+                   "execution record: its provenance is the offline result file.", icon="🧪")
+        ctl = r["control"]
+        a = r["attempts"][-1]
+        gov = next((b for b in replay_sources() if b.label == s.label.replace("baseline", "governed")), None)
+        gc = (gov.jl("compactions.jsonl") or [None])[0] if gov else None
+        k_present = [t for t in resummarize.KERNEL_TERMS if t.lower() in kernel.render_instructions().lower()]
+        col = lambda chk: (f"{len(chk['cf_present'])}/{len(chk['cf_exposed'])}"
+                           + (f" (missing {', '.join(chk['cf_missing'])})" if chk["cf_missing"] else ""))
+        miss = lambda chk: ", ".join(chk["kernel_terms_missing"]) or "none"
+        rs_ = r["summary"] or ""
+        ref = resummarize.checks_for(resummarize.load(s.label, c["compaction_id"]), "")
+        rows = [
+            {"": "Received by the agent?", "Recorded Claude summary": "yes: this is what the agent received",
+             "Liquid offline summary": "no: never sent to any agent",
+             "Mission Kernel (governed architecture)": "re-supplied on every request, independent of any summarizer"},
+            {"": "Tracked facts in the next request", "Recorded Claude summary": col(ctl["recorded_checks"]),
+             "Liquid offline summary": col(r["checks"]) if r["checks"] else "no valid summary",
+             "Mission Kernel (governed architecture)": "not applicable (facts are carried by the memory policy)"},
+            {"": "Mission terms missing", "Recorded Claude summary": miss(ctl["recorded_checks"]),
+             "Liquid offline summary": miss(r["checks"]) if r["checks"] else "no valid summary",
+             "Mission Kernel (governed architecture)": ("none in the Kernel text" if len(k_present) == len(resummarize.KERNEL_TERMS)
+                                                        else "missing " + ", ".join(t for t in resummarize.KERNEL_TERMS if t not in k_present))
+                                                       + (f"; recorded {gov.label} {gc['compaction_id']}: "
+                                                          + (", ".join(gc["context_checks"]["kernel_terms_missing"]) or "none missing") if gc else "")},
+            {"": "Reference: the same checks with an empty summary", "Recorded Claude summary": f"{col(ref)}; terms missing: {miss(ref)}",
+             "Liquid offline summary": f"{col(ref)}; terms missing: {miss(ref)}",
+             "Mission Kernel (governed architecture)": "not applicable"},
+            {"": "Summary", "Recorded Claude summary": f"{ctl['recorded_summary_words']} words (cap-trimmed to 150)",
+             "Liquid offline summary": (f"{len(rs_.split())} words" + (" (cap-trimmed)" if (r['caps'] or {}).get('summary_trimmed') else "")
+                                        + f", {len(r['proposals'])} proposals, valid schema") if r["summary"] else r["error"],
+             "Mission Kernel (governed architecture)": f"Kernel SHA-256 {kernel.sha256[:12]}…"},
+            {"": "Where it ran; tokens; time", "Recorded Claude summary":
+                f"Anthropic API, claude-sonnet-5; {ctl['recorded_summarizer']['input_tokens']:,} in / {ctl['recorded_summarizer']['output_tokens']:,} out (Anthropic tokenizer)",
+             "Liquid offline summary": f"this laptop, {r['model']['file']}; {(a.get('usage') or {}).get('prompt_tokens', '?'):,} in / "
+                                       f"{(a.get('usage') or {}).get('completion_tokens', '?'):,} out (Liquid tokenizer); {a['wall_s']} s",
+             "Mission Kernel (governed architecture)": "not a model output"},
+        ]
+        st.table(pd.DataFrame(rows).set_index(""))
+        st.caption("Scored with the unchanged fact-retention and mission-term checks on the next request rebuilt exactly "
+                   "as baseline compaction assembles it. Control: the recorded Claude summary, rebuilt the same way, "
+                   f"reproduces the recorded checks ({'PASS' if ctl['recorded_summary_reproduces_recorded_checks'] else 'FAIL'}). "
+                   "Reference row: with no summary at all the checks give the same result here, because the verbatim "
+                   "tail still carries these facts and neither summary carries the modify, delete and contact limits; "
+                   "at this compaction the checks cannot tell the two summaries apart. The checks test keyword presence, "
+                   "not correctness: read both summaries. One sample per summarizer; this does not rank the models or "
+                   "say anything about later agent behavior.")
+        l, rt = st.columns(2)
+        l.markdown("**Recorded Claude summary (received by the agent)**")
+        l.markdown(md(c["summary_text"]))
+        rt.markdown("**Liquid offline summary (never received by any agent)**")
+        rt.markdown(md(rs_) if rs_ else f"_{r['error']}_")
+        st.caption(f"Model {r['model']['repo']} @ {r['model']['revision'][:7]}, {r['model']['file']} "
+                   f"(SHA-256 {r['model']['verified_sha256'][:12]}…, {r['model']['license']}); {r['model']['runtime']}; "
+                   f"sampling {r['sampling']}, seed {a['seed']}; attempts {len(r['attempts'])}; input archive SHA-256 "
+                   f"{r['input']['archive_sha256'][:12]}…; generated {r['generated_at']}.")
+
+
 def compaction_view(s: Source, c: dict, banner: bool = True):
     decisions = c.get("decisions") or []
     ct = c.get("counted") or {}
     if banner:
         result_banner(c)
+        offline_resummary(s, c)
     st.markdown(f"**Mission + context + evidence → policy decision → what the agent sees next** · "
                 f"{c['mode']} · {c['compaction_id']} before request {c['run_step']}"
                 + (f" · :red[**induced omission {c['fault_injection']}**]" if c.get("fault_injection") not in (None, "none") else ""))

@@ -286,6 +286,36 @@ def _cmd_reconstruct(args) -> int:
     return 1
 
 
+def _cmd_resummarize(args) -> int:
+    from mission_continuity import resummarize as rs
+    if args.action == "control":
+        r = rs.control(args.label, args.cid)
+        print(f"recorded: {r['recorded']}\nrebuilt:  {r['rebuilt']}")
+        print("CONTROL", "PASS" if r["ok"] else "FAIL")
+        return 0 if r["ok"] else 4
+    if args.action == "model-check":
+        m = rs.verify_model()
+        print(f"model {rs.MODEL['file']}: SHA-256 {m['sha256']} ({m['bytes']:,} bytes) matches the pinned value")
+        with rs.Server() as srv:
+            print(f"llama-server {' / '.join(srv.version)}; n_ctx {(srv.props.get('default_generation_settings') or {}).get('n_ctx')}; "
+                  f"smoke reply: {srv.smoke()!r}")
+        return 0
+    if args.action == "liquid":
+        r = rs.run_liquid(args.label, args.cid)
+        a = r["attempts"][-1]
+        print(json.dumps({"valid": r["error"] is None, "error": r["error"], "attempts": len(r["attempts"]),
+                          "checks": r["checks"], "caps": r["caps"], "usage": a.get("usage"),
+                          "wall_s": a["wall_s"], "finish_reason": a.get("finish_reason")}, indent=1))
+        return 0
+    if args.action == "verify":
+        r = rs.verify(args.label, args.cid)
+        for k, v in r["checks"].items():
+            print(f"{'PASS' if v else 'FAIL'} {k}")
+        print("OFFLINE RESUMMARY", "PASS" if r["ok"] else "FAIL")
+        return 0 if r["ok"] else 4
+    return 1
+
+
 def _cmd_evaluate(args) -> int:
     from mission_continuity.evaluate import evaluate
     r = evaluate(args.label)
@@ -337,6 +367,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("scene", nargs="?")
     p.add_argument("--placeholder", action="store_true", help="solid backgrounds; output under var/")
     p.set_defaults(func=_cmd_reconstruct)
+
+    p = sub.add_parser("resummarize", help="Optional: offline exploratory re-summarization of a recorded compaction (Liquid AI, local)")
+    p.add_argument("action", choices=["control", "model-check", "liquid", "verify"])
+    p.add_argument("label", nargs="?", default="E1-baseline")
+    p.add_argument("cid", nargs="?", default="cmp-1")
+    p.set_defaults(func=_cmd_resummarize)
 
     p = sub.add_parser("evaluate", help="Evaluate one run (writes results.json)")
     p.add_argument("label")
