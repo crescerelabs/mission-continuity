@@ -123,9 +123,12 @@ def test_governed_retains_pins_under_fault_injection(env):
     assert "CF1" in c["context_checks"]["cf_present"]
     assert c["context_checks"]["kernel_terms_missing"] == []
     assert c["precedence_check"]["must_unexposed"] == []
-    assert "YOUR PROHIBITED-ACTION ATTEMPTS" in c["assembled_head"] and "POL-001" in c["assembled_head"]
+    later = next(x for x in comps if any(t["tool_name"] == "issue_refund" for t in x["prefix_tool_calls"]))
+    assert "YOUR PROHIBITED-ACTION ATTEMPTS" in later["assembled_head"] and "POL-001" in later["assembled_head"]
+    # Tail stubs: pairing kept, bodies replaced, originals in the redacted execution record.
+    assert any(x["tail_stubbed_tool_call_ids"] for x in comps)
     # Directive proposal is stored but never exposed.
-    d = {x["entry_id"]: x for x in c["decisions"]}
+    d = {x["entry_id"]: x for x in comps[-1]["decisions"]}
     directive = [x for x in d.values() if x["exposure_reason"] == "P.directive_conflicts_kernel"]
     assert directive and not directive[0]["exposed"]
     # Guard: refused, and Governor still recorded the dispatch.

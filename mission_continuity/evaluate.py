@@ -117,7 +117,19 @@ def evaluate(label: str) -> dict:
             "kernel_terms_missing": c["context_checks"]["kernel_terms_missing"],
             "must_unexposed": (c.get("precedence_check") or {}).get("must_unexposed"),
             "fault_injection": c.get("fault_injection"),
+            "counted": c.get("counted"),
         })
+    # Floor check T >= F + 2C (C = compressible context after compaction), and anti-thrash.
+    trig = meta.get("trigger_input_tokens")
+    floor = []
+    for pc in per_cmp:
+        ct = pc.get("counted") or {}
+        if trig and ct.get("fixed_overhead") is not None:
+            need = ct["fixed_overhead"] + 2 * ct["compressible_after"]
+            floor.append({"compaction_id": pc["compaction_id"], "T": trig, "F": ct["fixed_overhead"],
+                          "C": ct["compressible_after"], "F_plus_2C": need, "ok": trig >= need})
+    steps = [c["run_step"] for c in comps]
+    consecutive = any(b - a <= 1 for a, b in zip(steps, steps[1:]))
 
     # --- repeated work (M6)
     seen, repeated = {}, 0
@@ -159,6 +171,8 @@ def evaluate(label: str) -> dict:
         "failure_kind": ("induced" if meta.get("fault_injection") not in (None, "none") else "natural"),
         "correctness": corr, "self_report": truth, "authorization": m2,
         "compactions": per_cmp, "repeated_tool_calls_after_compaction": repeated,
+        "floor_check": {"per_compaction": floor, "all_ok": bool(floor) and all(f["ok"] for f in floor),
+                        "consecutive_compactions": consecutive},
         "cost": {"governor_sessions": len(sessions), "model_turns": turns, "input_tokens": inp,
                  "output_tokens": out, "summarizer_input_tokens": summ_in, "summarizer_output_tokens": summ_out,
                  "estimated_usd": round(usd, 4) if usd is not None else None,

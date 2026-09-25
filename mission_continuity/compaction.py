@@ -60,10 +60,55 @@ class CompactionCandidate(BaseModel):
 
 SUMMARIZER_INSTRUCTIONS = (
     "You compress an investigation agent's working history so it can continue. "
-    "Write a concise summary of what has been done and learned, and propose memory items "
-    "(findings, open questions, plans, notes), each citing the tool_call_ids it relies on. "
-    "Be factual; do not invent anything not in the history."
+    "Write a summary of what has been done and learned in AT MOST 150 words, and propose AT MOST 8 "
+    "memory items (findings, open questions, plans, notes), each AT MOST 25 words and citing the "
+    "tool_call_ids it relies on. Be factual; do not invent anything not in the history."
 )
+SUMMARY_MAX_WORDS = 150
+PROPOSALS_MAX = 8
+PROPOSAL_MAX_WORDS = 25
+SUMMARIZER_MAX_TOKENS = 900
+STUB_MIN_CHARS = 300   # tail tool results longer than this are replaced by a traceable stub
+
+
+def _words(text: str, n: int) -> tuple[str, bool]:
+    w = text.split()
+    return (" ".join(w[:n]), True) if len(w) > n else (text, False)
+
+
+def _cap(candidate: "CompactionCandidate") -> tuple["CompactionCandidate", dict]:
+    """Enforce the approved summarizer caps. Applies ONLY to advisory model output,
+    never to the Kernel or MUST pins."""
+    summary, s_trim = _words(candidate.summary, SUMMARY_MAX_WORDS)
+    props, p_trim = [], len(candidate.proposals) > PROPOSALS_MAX
+    for pr in candidate.proposals[:PROPOSALS_MAX]:
+        t, trimmed = _words(pr.text, PROPOSAL_MAX_WORDS)
+        p_trim = p_trim or trimmed
+        props.append(MemoryProposal(text=t, entry_kind=pr.entry_kind, cited_tool_call_ids=pr.cited_tool_call_ids))
+    return CompactionCandidate(summary=summary, proposals=props), {"summary_trimmed": s_trim, "proposals_trimmed": p_trim}
+
+
+def _stub_tail(tail):
+    """Replace large tail tool-result bodies with traceable stubs, keeping every
+    tool_call_id / tool_name pairing intact. Identical in both architectures."""
+    import dataclasses
+    out, stubbed = [], []
+    for msg in tail:
+        if not isinstance(msg, ModelRequest):
+            out.append(msg)
+            continue
+        parts = []
+        for p in msg.parts:
+            if isinstance(p, ToolReturnPart) and len(_content_str(p.content)) > STUB_MIN_CHARS:
+                stub = (f"[result compacted by the continuity manager: {p.tool_name} "
+                        f"tool_call_id={p.tool_call_id}; see the continuity/summary message above. "
+                        "The original is kept in the run's redacted execution record.]")
+                parts.append(dataclasses.replace(p, content=stub))
+                stubbed.append(p.tool_call_id)
+            else:
+                parts.append(p)
+        out.append(dataclasses.replace(msg, parts=parts))
+    return out, stubbed
 
 
 @dataclass
@@ -153,7 +198,9 @@ class MissionContinuity(AbstractCapability[Any]):
         self.entries: Dict[str, memory.Entry] = {}
         self.summary_text = ""
         self.summarizer_sessions: List[str] = []
-        self.compacted_calls: set = set()   # (tool, args) that have left active context at some compaction
+        self.compacted_calls: set = set()
+        self.last_compaction_step: Optional[int] = None
+        self._step = 0   # (tool, args) that have left active context at some compaction
 
     @staticmethod
     def get_serialization_name() -> str | None:
@@ -166,6 +213,7 @@ class MissionContinuity(AbstractCapability[Any]):
     async def before_model_request(self, ctx, request_context):
         msgs = request_context.messages
         compaction_id = None
+        self._step = ctx.run_step
         if self._should_compact(msgs):
             compaction_id, new_msgs = await self._compact(ctx, request_context)
             if new_msgs is not None:
@@ -200,6 +248,9 @@ class MissionContinuity(AbstractCapability[Any]):
     def _should_compact(self, msgs) -> bool:
         if self.cfg.trigger_input_tokens is None or len(msgs) < 3:
             return False
+        # Anti-thrash (approved): never compact on consecutive model requests.
+        if self.last_compaction_step is not None and self._step <= self.last_compaction_step + 1:
+            return False
         last = _last_input_tokens(msgs)
         new_returns = len(self.store.read_jsonl("tools.jsonl")) - self.tool_rows_at_last
         return (last is not None and last > self.cfg.trigger_input_tokens
@@ -208,6 +259,7 @@ class MissionContinuity(AbstractCapability[Any]):
     async def _summarize(self, prefix_text: str) -> tuple[CompactionCandidate, dict]:
         agent = Agent(self.cfg.summarizer_model, output_type=CompactionCandidate,
                       instructions=SUMMARIZER_INSTRUCTIONS,
+                      model_settings={"max_tokens": SUMMARIZER_MAX_TOKENS},
                       capabilities=[SentienceGovernor(agent_id="mc-compactor")])
         result = await agent.run(
             f"Working history to compress:\n\n{prefix_text}",
@@ -229,18 +281,21 @@ class MissionContinuity(AbstractCapability[Any]):
         cid = f"cmp-{self.compactions}"
         tool_rows = self.store.read_jsonl("tools.jsonl")
         self.tool_rows_at_last = len(tool_rows)
-        prefix_ids = set(_tool_call_ids(prefix))
+        new_tail, stubbed = _stub_tail(tail)
+        # Everything leaving the active context: the prefix, plus stubbed tail bodies.
+        prefix_ids = set(_tool_call_ids(prefix)) | set(stubbed)
         prefix_rows = [r for r in tool_rows if r.get("tool_call_id") in prefix_ids]
         completed_ids = {r["tool_call_id"] for r in tool_rows}
         withheld: List[str] = []
-        prefix_text = redact_text(render_messages(prefix), withheld)
+        prefix_text = redact_text(render_messages(list(prefix) + list(tail)), withheld)
 
         # Archive what leaves the active context (redacted; audit and "before" view only).
         from pydantic_ai.messages import ModelMessagesTypeAdapter
         self.store.write_json(f"archive/{cid}.json",
-                              json.loads(ModelMessagesTypeAdapter.dump_json(prefix)))
+                              json.loads(ModelMessagesTypeAdapter.dump_json(list(prefix) + list(tail))))
 
         candidate, summ = await self._summarize(prefix_text)
+        candidate, caps = _cap(candidate)
         if self.cfg.fault_injection != "none":
             candidate = _fault(candidate, self.cfg.fault_injection)
             self.store.append("interventions.jsonl", {
@@ -255,8 +310,10 @@ class MissionContinuity(AbstractCapability[Any]):
         else:
             head = ModelRequest(parts=[UserPromptPart(
                 "Summary of the work so far:\n" + candidate.summary)])
-        new_msgs = [head] + list(tail)
+        new_msgs = [head] + list(new_tail)
         assert isinstance(new_msgs[-1], ModelRequest)
+        self.last_compaction_step = ctx.run_step
+        counted = await self._count(request_context, msgs, new_msgs)
 
         instr = instructions_text(request_context)
         sent_text = (instr + "\n" + render_messages(new_msgs)).lower()
@@ -291,7 +348,12 @@ class MissionContinuity(AbstractCapability[Any]):
             "decisions": decisions,
             "withheld": sorted(set(withheld)),
             "fault_injection": self.cfg.fault_injection,
-            "summarizer": summ,
+            "summarizer": summ, "summarizer_caps": caps,
+            # Anthropic token-counting endpoint measurements of the SAME pending request,
+            # uncompacted vs compacted (identical instructions, tool and report schemas).
+            # Distinct from actual model usage and billed cost.
+            "counted": counted,
+            "tail_stubbed_tool_call_ids": stubbed,
             "assembled_head": block if block is not None else "Summary of the work so far:\n" + candidate.summary,
             "instructions_text": instr,
             "context_checks": {"kernel_terms_present": kernel_present,
@@ -301,11 +363,33 @@ class MissionContinuity(AbstractCapability[Any]):
         }
         if self.cfg.mode == "governed":
             must_unexposed = [e.entry_id for e in self.entries.values() if e.cls == memory.MUST and not e.exposed]
-            record["precedence_check"] = {"must_unexposed": must_unexposed}
+            must_tokens = sum(len(e.text) for e in self.entries.values() if e.cls == memory.MUST) // 4
+            record["precedence_check"] = {"must_unexposed": must_unexposed,
+                                          "must_block_est_tokens": must_tokens,
+                                          # Reported, never resolved by dropping evidence.
+                                          "must_budget_exceeded": bool(self.cfg.trigger_input_tokens)
+                                          and must_tokens > self.cfg.trigger_input_tokens // 2}
         self.store.append("compactions.jsonl", record)
         if self.cfg.mode == "governed":
             self._checkpoint(ctx, cid)
         return cid, new_msgs
+
+    async def _count(self, request_context, before, after) -> dict:
+        model = request_context.model
+        settings, params = request_context.model_settings, request_context.model_request_parameters
+        try:
+            b = (await model.count_tokens(list(before), settings, params)).input_tokens
+            a = (await model.count_tokens(list(after), settings, params)).input_tokens
+            f = (await model.count_tokens([ModelRequest(parts=[UserPromptPart(".")])], settings, params)).input_tokens
+        except NotImplementedError:
+            return {"source": "unavailable (model does not support token counting)"}
+        except Exception as exc:
+            return {"source": f"error: {type(exc).__name__}: {str(exc)[:200]}"}
+        return {"source": "anthropic_count_tokens_endpoint", "uncompacted": b, "compacted": a,
+                "fixed_overhead": f, "tokens_saved": b - a,
+                "reduction_pct": round(100 * (b - a) / b, 1) if b else None,
+                "ratio": round(a / b, 3) if b else None,
+                "compressible_after": a - f}
 
     def _govern(self, ctx, cid, candidate, prefix_rows, completed_ids):
         events = governor_evidence.read_trace(ctx.run_id)
