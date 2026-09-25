@@ -699,7 +699,7 @@ def overview(srcs):
     runs = []
     for s in srcs:
         r = s.j("results.json")
-        if not r or r.get("arm") in (None, "dev", "calibration", "live"):
+        if not r or r.get("arm") not in ("E0", "E1", "E2", "E1x"):
             continue
         cc = r["compactions"]
         runs.append({"group": "exploratory" if r["arm"] == "E1x" else "preregistered", "arm": r["arm"],
@@ -755,7 +755,7 @@ def render_comparison():
     rows = []
     for s in srcs:
         r = s.j("results.json")
-        if not r or r.get("arm") in (None, "dev", "calibration", "live"):
+        if not r or r.get("arm") not in ("E0", "E1", "E2", "E1x"):
             continue
         cc = r["compactions"]
         rows.append({"run": s.label, "arm": r["arm"], "architecture": r["mode"], "kind": r["failure_kind"],

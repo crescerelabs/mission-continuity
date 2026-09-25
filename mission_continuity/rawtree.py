@@ -69,7 +69,7 @@ def bundle_rows(bundle: Path) -> Dict[str, List[dict]]:
     comps = _jl(run / "compactions.jsonl")
     tools = _jl(run / "tools.jsonl")
     rid = bundle.name
-    group = "exploratory" if res["arm"] == "E1x" else "preregistered"
+    group = run_group(res["arm"])
     fault = res.get("fault_injection") or "none"
     condition = "natural" if fault == "none" else f"induced:{fault}"
     common = {"run_id": rid, "run_group": group, "mode": res["mode"], "condition": condition,
@@ -152,6 +152,20 @@ def bundle_rows(bundle: Path) -> Dict[str, List[dict]]:
              "policy_sha256": meta.get("policy_sha256")}]
     return {"sentience_mc_runs": runs, "sentience_mc_compactions": comp_rows, "sentience_mc_retention": ret_rows,
             "sentience_mc_tool_calls": tool_rows, "sentience_mc_governor_events": gov}
+
+
+EXPERIMENT_GROUPS = ("preregistered", "exploratory")
+SMOKE_DIR = VAR / "smoke"
+
+
+def run_group(arm: str) -> str:
+    """E0/E1/E2 are preregistered, E1x exploratory; any other arm keeps its own name
+    (for example integration_smoke_test) and is excluded from experiment queries."""
+    if arm == "E1x":
+        return "exploratory"
+    if arm in ("E0", "E1", "E2"):
+        return "preregistered"
+    return arm
 
 
 def leak_scan(rows_by_table: Dict[str, List[dict]]) -> List[str]:
@@ -284,3 +298,68 @@ def push(client: Client, per_bundle: dict) -> List[dict]:
 def run_sql(client: Client, name: str) -> dict:
     sql = (SQL_DIR / f"{name}.sql").read_text()
     return client.query(sql, query_id=None)
+
+
+_SAFE_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+def run_row_counts(client: Client, run_id: str) -> Dict[str, int]:
+    """Read-only per-table row counts for one run id (id validated before use in SQL)."""
+    if not _SAFE_ID.match(run_id):
+        raise RawTreeError(f"unsafe run id {run_id!r}")
+    out = {}
+    for t in TABLES:
+        d = client.query(f"SELECT count() AS n FROM {t} WHERE toString(run_id) = '{run_id}'")
+        out[t] = int(d["data"][0]["n"])
+    return out
+
+
+def push_run(client: Client, bundle: Path) -> dict:
+    """Append-only ingestion of ONE new verified bundle. Refuses if the database is not the
+    explicitly selected one, the export fails the leak scan, or the run id already has rows."""
+    status = check(client)
+    if not status["database_ok"]:
+        raise RawTreeError(f"requests resolve to {status['current_database']!r}, not {client.database!r}")
+    missing = [t for t, exists in status["own_tables_exist"].items() if not exists]
+    if missing:
+        raise RawTreeError(f"expected existing tables, missing: {missing}")
+    rows = bundle_rows(bundle)
+    if leak_scan(rows):
+        raise RawTreeError("refused: personal-data value found in outgoing rows")
+    already = run_row_counts(client, bundle.name)
+    if any(already.values()):
+        raise RawTreeError(f"refused: run {bundle.name!r} already has rows: {already}")
+    report = push(client, {bundle.name: rows})
+    return {"run_id": bundle.name, "sent": {t: len(r) for t, r in rows.items()}, "inserts": report}
+
+
+def verify_run(client: Client, bundle: Path) -> dict:
+    """Compare RawTree's rows for one run with the run's local recorded artifacts."""
+    rid = bundle.name
+    local = bundle_rows(bundle)
+    checks = {}
+    counts = run_row_counts(client, rid)
+    for t in TABLES:
+        checks[f"rows {t}"] = (counts[t], len(local[t]))
+    d = client.query(
+        "SELECT countIf(toString(governor_recorded) = 'true') AS joined, count() AS calls "
+        f"FROM sentience_mc_tool_calls WHERE toString(run_id) = '{rid}'")["data"][0]
+    checks["governor joins (tool calls with a SCOPE_ASSERTED record)"] = (
+        (int(d["joined"]), int(d["calls"])),
+        (sum(1 for r in local["sentience_mc_tool_calls"] if r["governor_recorded"]), len(local["sentience_mc_tool_calls"])))
+    d = client.query(
+        "SELECT toString(compaction_id) AS c, toInt64(counted_uncompacted) AS u, toInt64(counted_compacted) AS k, "
+        "toInt64(tokens_saved) AS s, accurateCastOrNull(reduction_pct, 'Float64') AS p, toInt64(facts_present) AS f "
+        f"FROM sentience_mc_compactions WHERE toString(run_id) = '{rid}' ORDER BY c")["data"]
+    checks["compaction measurements"] = (
+        [(x["c"], int(x["u"]), int(x["k"]), int(x["s"]), float(x["p"]), int(x["f"])) for x in d],
+        [(c["compaction_id"], c["counted_uncompacted"], c["counted_compacted"], c["tokens_saved"],
+          float(c["reduction_pct"]), c["facts_present"]) for c in local["sentience_mc_compactions"]])
+    d = client.query(
+        "SELECT toString(outcome) AS o, toInt64(score) AS sc, toInt64(input_tokens) AS it, toString(run_group) AS g "
+        f"FROM sentience_mc_runs WHERE toString(run_id) = '{rid}'")["data"]
+    lr = local["sentience_mc_runs"][0]
+    checks["outcome, score, input tokens, group"] = (
+        [(x["o"], int(x["sc"]), int(x["it"]), x["g"]) for x in d],
+        [(lr["outcome"], lr["score"], lr["input_tokens"], lr["run_group"])])
+    return {k: {"rawtree": a, "local": b, "match": a == b} for k, (a, b) in checks.items()}

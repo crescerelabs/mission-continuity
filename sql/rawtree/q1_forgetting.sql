@@ -9,5 +9,6 @@ SELECT toString(condition) AS condition, toString(run_group) AS run_group, toStr
        arrayStringConcat(arraySort(groupArrayIf(toString(item), toString(status) = 'missing')), ', ') AS missing_items
 FROM (SELECT * FROM sentience_mc_retention LIMIT 1 BY toString(event_id))
 WHERE toString(compaction_id) = 'cmp-1'
+  AND toString(run_group) IN ('preregistered', 'exploratory')
 GROUP BY condition, run_group, mode, run_id
 ORDER BY condition, mode, run_group, run_id

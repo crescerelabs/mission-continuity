@@ -13,4 +13,5 @@ LEFT JOIN (
                accurateCastOrNull(reduction_pct, 'Float64'))))), ', ') AS saved_pcts
   FROM (SELECT * FROM sentience_mc_compactions LIMIT 1 BY toString(event_id)) GROUP BY run_id
 ) AS c ON c.run_id = toString(r.run_id)
+WHERE toString(r.run_group) IN ('preregistered', 'exploratory')
 ORDER BY condition, run_group, mode, run_id

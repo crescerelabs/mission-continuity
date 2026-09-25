@@ -9,5 +9,6 @@ SELECT toString(condition) AS condition, toString(run_group) AS run_group, toStr
        countIf(toString(a2_met) = 'true') AS runs_meeting_a2
 FROM (SELECT * FROM sentience_mc_compactions LIMIT 1 BY toString(event_id))
 WHERE toString(first_compaction) = 'true'
+  AND toString(run_group) IN ('preregistered', 'exploratory')
 GROUP BY condition, run_group, mode
 ORDER BY condition, run_group, mode

@@ -24,10 +24,10 @@ def _sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
-def make_bundle(label: str) -> Path:
+def make_bundle(label: str, root: Path = REPLAYS) -> Path:
     src = run_dir(label)
     meta = json.loads((src / "run.json").read_text())
-    dst = REPLAYS / label
+    dst = root / label
     if dst.exists():
         shutil.rmtree(dst)
     # runner.log (worker stdout/stderr) stays local: it can contain local filesystem

@@ -56,3 +56,15 @@ def test_groups_and_conditions_are_labeled():
     call = next(r for r in per["E1-baseline"]["sentience_mc_tool_calls"] if r["tool_name"] == "contact_customer")
     assert call["request_step"] == 12 and call["app_outcome"] == "simulated_effect"
     assert call["governor_violations"] == "POL-001" and call["governor_flags"] == "SCOPE_INTENT_MISMATCH"
+
+
+def test_run_group_mapping_keeps_smoke_runs_out_of_experiment_groups():
+    assert rawtree.run_group("E0") == rawtree.run_group("E2") == "preregistered"
+    assert rawtree.run_group("E1x") == "exploratory"
+    assert rawtree.run_group("integration_smoke_test") == "integration_smoke_test"
+    assert rawtree.run_group("integration_smoke_test") not in rawtree.EXPERIMENT_GROUPS
+
+
+def test_experiment_queries_filter_to_experiment_groups():
+    for name in ("q0_reconcile", "q1_forgetting", "q3a_first_compaction", "q3b_whole_run"):
+        assert "IN ('preregistered', 'exploratory')" in (rawtree.SQL_DIR / f"{name}.sql").read_text(), name

@@ -165,6 +165,27 @@ def _cmd_rawtree(args) -> int:
         print(json.dumps({"database": client.database, "inserts": len(report),
                           "rows_sent": sum(x["rows"] for x in report)}, indent=1))
         return 0
+    if args.action in ("push-run", "verify-run"):
+        from mission_continuity.bundle import make_bundle, verify
+        label = args.name
+        bdir = rawtree.SMOKE_DIR / label
+        if args.action == "push-run":
+            bdir = make_bundle(label, root=rawtree.SMOKE_DIR)
+            v = verify(bdir)
+            print(f"bundle {bdir.relative_to(REPO)}: {v}")
+            if not v["ok"]:
+                return 3
+            out = rawtree.push_run(client, bdir)
+            (bdir.parent / f"{label}.push_report.json").write_text(json.dumps(out, indent=1))
+            print(json.dumps({"run_id": out["run_id"], "database": client.database, "sent": out["sent"],
+                              "inserted": {x["table"]: x["inserted"] for x in out["inserts"]}}, indent=1))
+            return 0
+        res = rawtree.verify_run(client, bdir)
+        ok = all(x["match"] for x in res.values())
+        for k, x in res.items():
+            print(f"{'PASS' if x['match'] else 'FAIL'} {k}: RawTree {x['rawtree']} | local {x['local']}")
+        print("RUN VERIFICATION", "PASS" if ok else "FAIL")
+        return 0 if ok else 4
     if args.action == "query":
         data = rawtree.run_sql(client, args.name)
         (rawtree.OUT_DIR / f"{args.name}.result.json").write_text(json.dumps(data, indent=1))
@@ -191,6 +212,10 @@ def _cmd_rawtree(args) -> int:
                 local[r["label"]] = r
         for r in rawtree.run_sql(client, "q3b_whole_run")["data"]:
             L = local.get(r["run_id"])
+            if L is None:
+                ok = False
+                print(f"FAIL unexpected run in experiment query: {r['run_id']}")
+                continue
             checks = {"score": (int(r["score"]), L["score"]),
                       "input_tokens": (int(r["input_tokens_all_sessions"]), L["input_tokens"]),
                       "compactions": (int(r["compactions"]), L["compactions"]),
@@ -251,7 +276,7 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=_cmd_summarize)
 
     p = sub.add_parser("rawtree", help="Optional: export recorded evidence to RawTree and query it")
-    p.add_argument("action", choices=["export", "check", "push", "query", "reconcile"])
+    p.add_argument("action", choices=["export", "check", "push", "push-run", "verify-run", "query", "reconcile"])
     p.add_argument("name", nargs="?", default="q0_reconcile")
     p.set_defaults(func=_cmd_rawtree)
 
