@@ -83,6 +83,22 @@ def replay_sources():
     return out
 
 
+def completed_live_sources():
+    """Completed live investigations (arm "live") under var/runs, newest first. Not part of the experiment."""
+    out = []
+    for s in live_sources():
+        meta = s.j("run.json", {})
+        if meta.get("arm") == "live" and meta.get("outcome") == "completed":
+            out.append(s)
+    return out
+
+
+def replay_choices():
+    """Replay-mode run picker: recorded experiment bundles first, then completed live investigations."""
+    return ([("Recorded experiment", s) for s in replay_sources()]
+            + [("Completed live investigation", s) for s in completed_live_sources()])
+
+
 def md(text) -> str:
     """Escape $ so amounts are not rendered as LaTeX."""
     return str(text).replace("$", "\\$")
@@ -122,7 +138,7 @@ def _navigate(screen=None, bundle=None, origin=None):
     params = {k: v for k, v in (("screen", screen), ("bundle", bundle), ("origin", origin)) if v}
     st.query_params.from_dict(params)
     st.session_state["_scroll_top"] = True
-    names = [b.label for b in replay_sources()]
+    names = [s.label for _, s in replay_choices()]
     if bundle in names:
         st.session_state["bundle_sel"] = names.index(bundle)
 
@@ -233,40 +249,56 @@ if mode == "Live":
         time.sleep(2)
     if not key_ok:
         st.sidebar.warning("No Anthropic key found. Live runs are disabled; Replay still works.")
-    runs = live_sources()
-    labels = [s.label for s in runs]
-    default = labels.index(st.session_state["live_label"]) if st.session_state.get("live_label") in labels else 0
-    if labels:
-        src = runs[st.sidebar.selectbox("Run", range(len(labels)), index=default, format_func=lambda i: labels[i])]
+    current = st.session_state.get("live_label")
+    run = next((s for s in live_sources() if s.label == current), None) if current else None
+    if run is not None:
+        src = run
+        st.session_state.pop("live_wait", None)
+        st.sidebar.markdown(f"**Current investigation**  \n`{run.label}`")
+    elif current and st.session_state.get("live_wait", 0) < 20:
+        # the run's records appear a moment after Start; refresh until they do (bounded)
+        st.session_state["live_wait"] = st.session_state.get("live_wait", 0) + 1
+        st.sidebar.info(f"Starting `{current}`…")
+        time.sleep(1.5)
+        st.rerun()
+    elif current:
+        st.sidebar.warning(f"`{current}` has not produced run records yet; check the terminal or try again.")
+    else:
+        st.sidebar.info("No investigation started in this session. Start one above; completed live "
+                        "investigations can be reopened from Replay.")
 else:
-    bundles = replay_sources()
-    if bundles:
-        names = [b.label for b in bundles]
+    choices = replay_choices()
+    if choices:
+        names = [s.label for _, s in choices]
         import os
         want = QP.get("bundle") or os.path.basename(os.environ.get("MC_REPLAY_BUNDLE", "").rstrip("/")) or "E1-governed"
         default = next((i for i, n in enumerate(names) if n == want), 0)
-        if "bundle_sel" not in st.session_state:
+        if "bundle_sel" not in st.session_state or st.session_state["bundle_sel"] >= len(names):
             st.session_state["bundle_sel"] = default
-        src = bundles[st.sidebar.selectbox("Recorded run (replay bundle)", range(len(names)), key="bundle_sel",
-                                           format_func=lambda i: names[i])]
+        kind, src = choices[st.sidebar.selectbox("Run", range(len(names)), key="bundle_sel",
+                                                 format_func=lambda i: f"{choices[i][0]} · {names[i]}")]
         if QP.get("bundle") and QP["bundle"] != src.label:
             st.query_params["bundle"] = src.label
             QP["bundle"] = src.label
-        v = verified(src.label, (REPLAYS / src.label / "manifest.json").stat().st_mtime)
-        if v["ok"]:
-            st.sidebar.success(f"Recorded run · artifacts verified ({v['files']} files, hashes match)")
+        if src.replay:
+            v = verified(src.label, (REPLAYS / src.label / "manifest.json").stat().st_mtime)
+            if v["ok"]:
+                st.sidebar.success(f"Recorded experiment · artifacts verified ({v['files']} files, hashes match)")
+            else:
+                st.sidebar.error(f"Bundle failed verification: {v}")
+                st.stop()
         else:
-            st.sidebar.error(f"Bundle failed verification: {v}")
-            st.stop()
+            st.sidebar.info("Completed live investigation · not part of the experiment and not a hash-verified "
+                            "replay bundle; shown from its run records and Governor trace.")
     else:
-        st.sidebar.info("No replay bundles yet (mc bundle <label>).")
+        st.sidebar.info("No recorded runs yet (mc bundle <label>).")
 
 if src is not None:
     meta = src.j("run.json", {})
     steps = sorted({r["run_step"] for r in src.jl("requests.jsonl")}) or [0]
     st.sidebar.caption(f"{meta.get('mode')} · {meta.get('arm')} · outcome **{meta.get('outcome')}** · "
                        f"fault {meta.get('fault_injection')}")
-    if src.replay and len(steps) > 1:
+    if mode == "Replay" and len(steps) > 1:   # recorded experiments and completed live investigations
         qup = int(QP["upto"]) if QP.get("upto", "").isdigit() else max(steps)
         upto = st.sidebar.slider("Replay up to model request", min(steps), max(steps), min(max(qup, min(steps)), max(steps)))
     else:
