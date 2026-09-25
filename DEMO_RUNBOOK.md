@@ -23,11 +23,11 @@ cd ~/mission-continuity
 make demo
 ```
 
-Open `http://localhost:8501`. On the **Mission** tab, the Readiness panel should show green rows for `pydantic-ai-governor 0.1.1`, `sentience-governor 0.3.2.1`, `pydantic-ai-slim 2.37.0`, `anthropic`, `streamlit`, and "Anthropic key set (value never shown)".
+Open `http://localhost:8501`. On the **Mission** tab, expand **Technical configuration**; it should show green rows for `pydantic-ai-governor 0.1.1`, `sentience-governor 0.3.2.1`, `pydantic-ai-slim 2.37.0`, `anthropic`, `streamlit`, and "Anthropic key set (value never shown)".
 
 ## 1. Readiness (Mission tab)
 
-- **Do:** click **Readiness check (one small live call)**.
+- **Do:** in **Technical configuration**, click **Readiness check (one small live call)**.
 - **Expect:** "Claude ✓ · Pydantic AI tool call ✓ · Governor evidence ✓ (N events, session …)".
 - **Say:** "This is a real Claude agent running through Pydantic AI, and the Sentience Governor library is recording what it does. We just confirmed all three are live."
 - **If not:** no key or no network means skip to stage 3; everything else runs from recorded runs.
@@ -49,13 +49,13 @@ Open `http://localhost:8501`. On the **Mission** tab, the Readiness panel should
 
 ## 4. The investigation (Investigation tab)
 
-- **Do:** drag **Replay up to model request** from 1 to the end.
-- **Expect:** the context meter climbing toward the trigger line; tool calls with GOVERNOR chips; the compaction banner.
+- **Do:** drag **Replay up to model request** from 1 to the end. The timeline opens on **Key events**; switch to **All events** for every tool call.
+- **Expect:** the context meter climbing toward the trigger line; Key events showing the declared mission, each compaction with facts, limits and reduction, any prohibited or flagged call, and the final report.
 - **Say:** "Every request re-sends the whole working context, so it grows every step. The agent pulls the account, payments, invoices, credits, policies and support tickets. The payment list makes the $149 look like a double charge; only the payment detail shows one of them was an authorization that was released."
 
 ## 5. Compaction (Compaction tab)
 
-Walk the seven bands top to bottom.
+Start with the result banner (key facts retained, mission limits, same-request reduction, A2), then walk the seven bands top to bottom.
 - **Say (band 1):** "This is what the agent is about to forget."
 - **Say (band 2):** "The model proposed this summary."
 - **Say (band 3):** "This is what our retention policy required the application to keep word for word, including the agent's own attempts at prohibited actions with the flags Governor actually recorded, and what it is never allowed to keep."
@@ -71,7 +71,7 @@ Outcome-bound lines. Each is supported by the named bundle's `results.json`; use
 
 ## 6. Baseline vs governed
 
-- **Where:** Compaction tab, **Compare side by side with** set to `E1-baseline`; then the **Comparison** tab.
+- **Where:** Compaction tab, **Compare side by side with** set to `E1-baseline` (read the side-by-side summary table first); then the **Comparison** tab, which opens with the Results overview.
 - **Say:** "Same mission, same model, same data, same trigger; two continuity architectures. These token numbers come from Governor's records. Governor records and flags; any refusal you see came from our application's mission guard, and it's counted separately. Natural runs and the injected-omission runs are shown separately."
 
 ## 7. Final report and verified artifacts (Report tab)
