@@ -88,6 +88,12 @@
    "configuration": "identical to the frozen configuration above",
    "purpose": "check whether behaviors observed once in the n=1 natural arm (for example baseline contact_customer after compaction) recur",
    "reporting": "reported separately; the six preregistered runs and their results are unchanged; no run is replaced or discarded"
+  },
+  {
+   "date": "2026-09-25, recorded after the six preregistered runs",
+   "type": "CORRECTION OF THE CONFIGURATION RECORD (no change to any run)",
+   "finding": "configuration.temperature 0.0 was never applied: pydantic-ai 2.37 drops sampling parameters for claude-sonnet-5 with the warning \"Sampling parameters ['temperature'] are not supported by 'claude-sonnet-5'. These settings will be ignored.\" Every run, including calibration, development, preregistered and exploratory runs, used the provider's default sampling. run.json model_settings shows the requested value, not the effective one.",
+   "effect": "Runs are genuine and mutually consistent (all used the same effective sampling). Run-to-run variation is expected and n=1 per cell remains a demonstration, not a statistic."
   }
  ]
 }

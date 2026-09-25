@@ -3,7 +3,7 @@
  "arm": "E1",
  "mode": "baseline",
  "fault_injection": "none",
- "app_commit": "424b6dc",
+ "app_commit": "80b6392",
  "kernel_sha256": "2df347fbf2c8c581f7f09fe46e249ba76b81afbea80b4489111724be414db145",
  "dataset_sha256": "91aedded4831e87ad70cae945208515df04fd4325cff2cab3209812af5eb1d3f",
  "policy_sha256": "dc417d1b295cdd715f823fa76cef33606bf32c5a926c43c70dc025c0fe271357",
@@ -17,7 +17,6 @@
   "run/requests.jsonl": "3e128385c5bbc4f2f44b517ada34ee7088cec9174e6f675d55b472d2984a93c0",
   "run/results.json": "b9036d6c1971f90cf7763ab0640d513e5424f981be160d144087d5afbf275d78",
   "run/run.json": "e69ac10ffd099e0d1b12e327b6517926806ebf90837e7fff42f8ad7ab229fc32",
-  "run/runner.log": "0ea9bb0bc0b10f78f08067ffe34a8043d7bcf35a659d46db28aa8ca2aef6f420",
   "run/tools.jsonl": "40c6cb717dd50edbaa69c94ea3f43fdf177a3ab90da216e16ce4a3cf47c12dfb",
   "traces/01a0d9c8-82eb-7037-b48f-269986dcdcf8.jsonl": "3b214a74370103b8891ba7f45c209f275296f472e9846ebdd6d24537fc2af369",
   "traces/01a0d9c8-d3d5-718b-84e4-5c8af731fe3a.jsonl": "cb02ca89002436e6c40d195d494dc344ead0c826e6b64cff0d4118bc0c6b3c71"

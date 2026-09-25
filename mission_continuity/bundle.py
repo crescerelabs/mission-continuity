@@ -2,6 +2,7 @@
 
 A bundle is replays/<label>/ with
   run/        the run's redacted ledgers, compactions, checkpoints, report, results
+              (not runner.log, which stays local because it can contain local paths)
   traces/     every Governor trace file of the run's sessions (investigator + compactor)
   manifest.json  label, arm, mode, app commit, kernel/dataset/policy hashes, SHA-256 per file
 Nothing is regenerated or edited. verify() recomputes every hash.
@@ -29,7 +30,9 @@ def make_bundle(label: str) -> Path:
     dst = REPLAYS / label
     if dst.exists():
         shutil.rmtree(dst)
-    shutil.copytree(src, dst / "run")
+    # runner.log (worker stdout/stderr) stays local: it can contain local filesystem
+    # paths. Its evaluated content, the GOVERNANCE_ERROR count, is in results.json.
+    shutil.copytree(src, dst / "run", ignore=shutil.ignore_patterns("runner.log"))
     (dst / "traces").mkdir(parents=True)
     for sid in meta.get("governor_session_ids", []):
         if trace_file(sid).exists():

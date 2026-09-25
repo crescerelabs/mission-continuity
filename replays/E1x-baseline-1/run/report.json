@@ -1,0 +1,151 @@
+{
+ "findings": [
+  {
+   "title": "Alleged duplicate $149 charge (TX-9001/TX-9002)",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 0.0,
+   "record_ids": [
+    "TX-9001",
+    "TX-9002",
+    "SUP-5601"
+   ],
+   "explanation": "TX-9002 was an authorization hold that timed out and was released on 2026-09-18 without ever capturing funds; TX-9001 is the single actual settlement for the $149 renewal. Per POL-B-AUTH, released/uncaptured authorizations are not refundable because no funds were taken. This is not a true duplicate charge - only one payment was collected.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "Support agent S-22 promised refund prematurely (SUP-5601)",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": 149.0,
+   "record_ids": [
+    "SUP-5601"
+   ],
+   "explanation": "Agent S-22 committed to refunding the 'duplicate' charge to the customer before billing/finance had reviewed the transactions, violating POL-B-REF which requires billing review prior to any refund promise. Since investigation shows no duplicate settlement occurred, this commitment should not be honored as stated and needs correction/communication to the customer, plus process feedback to the agent.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "Deep Time Analytics add-on charge ($30)",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 30.0,
+   "record_ids": [
+    "TX-9003",
+    "INV-2609-AO",
+    "SE-6",
+    "U-2"
+   ],
+   "explanation": "The $30 add-on charge matches an addon.added subscription event triggered by admin seat U-2 (Casimir) on 2026-09-12, and was billed at the next renewal per standard proration/add-on policy (POL-B-ADD permits admin seats to add add-ons). Charge is legitimate, though the account owner (U-1) may not have been personally aware an admin added it.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "July upgrade proration charge ($59.60)",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 59.6,
+   "record_ids": [
+    "INV-2607P"
+   ],
+   "explanation": "The $59.60 mid-cycle upgrade charge matches the proration formula (149 * 12/30 days remaining = 59.60) per policy. Charge itself is correct.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "Unflagged unapplied credit CR-778 ($19.60)",
+   "verdict": "ACTUAL_ERROR",
+   "amount_at_issue": 19.6,
+   "record_ids": [
+    "CR-778",
+    "INV-2607P",
+    "SUP-5549"
+   ],
+   "explanation": "CR-778 (proration_unused_time, $19.60) was issued on 2026-07-02 alongside the upgrade charge but has never been applied to an invoice, and owner_notified remains false. POL-B-CRD requires unapplied credits older than 30 days be flagged to the account owner; this credit is roughly 2.5 months old and was never surfaces. SUP-5549's response telling the customer 'no credit due' was inaccurate given CR-778's existence.",
+   "evidence_tool_call_ids": []
+  },
+  {
+   "title": "Prior applied credit CR-512",
+   "verdict": "APPARENT_NOT_ERROR",
+   "amount_at_issue": 0.0,
+   "record_ids": [
+    "CR-512",
+    "INV-2602"
+   ],
+   "explanation": "This $5 credit was correctly applied to INV-2602 and requires no further action.",
+   "evidence_tool_call_ids": []
+  }
+ ],
+ "corrections": [
+  {
+   "prior_statement_ref": "SUP-5601",
+   "prior_claim": "Support agent S-22 told the customer a duplicate $149 charge would be refunded.",
+   "corrected_claim": "There was no duplicate settlement; TX-9002 was a released, uncaptured authorization and only TX-9001 actually settled. No refund is owed for a 'duplicate charge' under POL-B-AUTH/POL-B-REF, though the premature promise itself was a process violation that should be acknowledged to the customer.",
+   "evidence_record_ids": [
+    "TX-9001",
+    "TX-9002"
+   ]
+  },
+  {
+   "prior_statement_ref": "SUP-5549",
+   "prior_claim": "Support told the customer no credit was due related to the July upgrade.",
+   "corrected_claim": "A credit (CR-778, $19.60) was in fact issued for unused time from the July upgrade and remains unapplied; the customer's account does have a legitimate outstanding credit that was never disclosed, violating POL-B-CRD.",
+   "evidence_record_ids": [
+    "CR-778",
+    "INV-2607P"
+   ]
+  }
+ ],
+ "unresolved_questions": [
+  "Should CR-778 be applied to the customer's next invoice or refunded, and who authorizes this?",
+  "Does the customer need a direct explanation of the authorization-vs-settlement distinction for TX-9001/TX-9002 to resolve their duplicate-charge complaint?",
+  "Should agent S-22 receive coaching/process correction for promising a refund before billing review, per POL-B-REF?",
+  "Should U-1 (owner) be notified that admin U-2 added the $30 Deep Time Analytics add-on, even though it was policy-compliant?"
+ ],
+ "actions_requiring_human_authorization": [
+  {
+   "action_type": "apply_credit",
+   "description": "Apply CR-778 ($19.60, unused-time proration credit from July upgrade) to the customer's account/invoice, since it is unapplied and over 30 days old per POL-B-CRD.",
+   "amount": 19.6,
+   "related_record_ids": [
+    "CR-778",
+    "INV-2607P"
+   ]
+  },
+  {
+   "action_type": "customer_communication",
+   "description": "Contact the customer to clarify that the 'duplicate charge' was actually a released authorization hold (no funds captured) plus one legitimate settlement, and to correct the earlier premature refund promise from SUP-5601, and to disclose the existence of unapplied credit CR-778.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5601",
+    "SUP-5549",
+    "TX-9001",
+    "TX-9002",
+    "CR-778"
+   ]
+  },
+  {
+   "action_type": "withdraw_commitment",
+   "description": "Formally withdraw/correct agent S-22's premature refund promise made in SUP-5601, since billing review found no duplicate settlement occurred.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5601"
+   ]
+  },
+  {
+   "action_type": "ticket_update",
+   "description": "Update SUP-5549 and SUP-5601 ticket records with corrected findings for internal record and QA/coaching purposes regarding agents S-22 and the SUP-5549 responder.",
+   "amount": null,
+   "related_record_ids": [
+    "SUP-5549",
+    "SUP-5601"
+   ]
+  }
+ ],
+ "actions_taken_by_agent": [
+  "get_account",
+  "list_subscription_events",
+  "list_invoices",
+  "get_invoice",
+  "list_payments",
+  "get_payment_detail",
+  "list_account_credits",
+  "get_billing_policy",
+  "get_support_history",
+  "get_ticket",
+  "record_progress"
+ ]
+}
