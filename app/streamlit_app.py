@@ -114,12 +114,47 @@ def replay_info(label: str):
     return reconstruct.available(label, allow_placeholder=REPLAY_PREVIEW)
 
 
+ORIGIN_LABEL = {"mission": "Mission", "investigation": "Investigation", "comparison": "Comparison"}
+
+
+def _navigate(screen=None, bundle=None, origin=None):
+    """Same-tab navigation: set the query parameters (and the sidebar run) before the rerun."""
+    params = {k: v for k, v in (("screen", screen), ("bundle", bundle), ("origin", origin)) if v}
+    st.query_params.from_dict(params)
+    st.session_state["_scroll_top"] = True
+    names = [b.label for b in replay_sources()]
+    if bundle in names:
+        st.session_state["bundle_sel"] = names.index(bundle)
+
+
 def watch_replay(label: str, where, key: str):
-    """The one Watch Replay action. Every placement resolves to the same run-specific view."""
+    """The one Watch Replay action. Every placement resolves to the same run-specific view, in the same tab."""
     if replay_info(label):
-        where.link_button(f"▶ Watch Replay · {label}", replay_url(label), type="primary")
+        where.button(f"▶ Watch Replay · {label}", key=f"wr-{key}-{label}", type="primary",
+                     on_click=_navigate, kwargs={"screen": "replay", "bundle": label, "origin": key})
     else:
         where.caption(f"▶ Watch Replay · {label}: Replay not yet generated.")
+
+
+def _scroll_top():
+    """After same-tab navigation, start the new screen at the top (Streamlit keeps the old scroll position)."""
+    if st.session_state.pop("_scroll_top", False):
+        import streamlit.components.v1 as components
+        components.html("<script>const d=window.parent.document;"
+                        "for (const sel of ['[data-testid=stMain]','[data-testid=stAppViewContainer]','section.main'])"
+                        "{const e=d.querySelector(sel); if(e) e.scrollTo(0,0);} window.parent.scrollTo(0,0);</script>",
+                        height=0)
+
+
+def return_bar(label: str, origin=None):
+    """Back to the originating screen (same run) and a Return to console fallback."""
+    cols = st.columns([1, 1, 4]) if origin in ORIGIN_LABEL else st.columns([1, 5])
+    i = 0
+    if origin in ORIGIN_LABEL:
+        cols[0].button(f"← Back to {ORIGIN_LABEL[origin]}", key="nav-back",
+                       on_click=_navigate, kwargs={"screen": origin, "bundle": label})
+        i = 1
+    cols[i].button("⌂ Return to console", key="nav-console", on_click=_navigate, kwargs={"bundle": label})
 
 
 @st.cache_data(show_spinner=False)
@@ -128,23 +163,25 @@ def _replay_verified(label: str, mtime: float, placeholder: bool) -> dict:
 
 
 def render_replay():
-    label = src.label if src is not None else QP.get("bundle")
-    st.title(f"Watch Replay · {label}")
+    label = QP.get("bundle") or (src.label if src is not None else None)
+    return_bar(label, QP.get("origin"))
+    st.markdown(f"**Watch Replay · {label}** · recorded agent session")
     info = replay_info(label) if label else None
     if not info:
         st.info("Replay not yet generated.")
-        st.markdown(f"[Open this run's Investigation timeline](?screen=investigation&bundle={label})")
         return
-    st.info(REPLAY_LABEL, icon="🖥️")
     if info["placeholder"]:
         st.error("Local preview render (var/): not the published replay.")
     rj, tl = info["render"], info["timeline"]
-    st.video((info["dir"] / rj["video"]).read_bytes())
+    player, _ = st.columns([5, 1])   # keeps the whole 16:9 player inside a ~860 px tall recording viewport
+    player.video((info["dir"] / rj["video"]).read_bytes())
     v = _replay_verified(label, (info["dir"] / "render.json").stat().st_mtime, info["placeholder"])
-    st.caption(f"{rj['duration_s']} s · {len(tl['events'])} recorded events in recorded order · verification: "
-               f"**{'PASS' if v['ok'] else 'FAIL'}** (timeline rebuilt from the records, every source row and file, "
-               f"video hash) · video SHA-256 {rj['video_sha256'][:12]}…")
-    st.markdown(f"[Open this run's Investigation timeline](?screen=investigation&bundle={label})")
+    bv = verified(label, (REPLAYS / label / "manifest.json").stat().st_mtime)
+    st.caption(REPLAY_LABEL + f" · {rj['duration_s']} s · {len(tl['events'])} recorded events · bundle verified "
+               f"({bv['files']} files, hashes match) · replay verification: **{'PASS' if v['ok'] else 'FAIL'}** "
+               f"· video SHA-256 {rj['video_sha256'][:12]}…")
+    st.button("Open this run's Investigation timeline", key="nav-inv",
+              on_click=_navigate, kwargs={"screen": "investigation", "bundle": label})
     st.subheader("Key events and their source evidence")
     spans = rj.get("event_spans_s", {})
     show = st.toggle("Show every event (including each ordinary tool call and model request)", value=False,
@@ -175,7 +212,7 @@ def render_replay():
 
 
 # ?screen=compaction&bundle=E1-governed&pair=E1-baseline&cmp=cmp-1&upto=12
-QP = {k: st.query_params.get(k) for k in ("screen", "bundle", "pair", "cmp", "upto", "events")}
+QP = {k: st.query_params.get(k) for k in ("screen", "bundle", "pair", "cmp", "upto", "events", "origin")}
 QP = {k: v for k, v in QP.items() if v}
 st.sidebar.title("Mission Continuity")
 mode = st.sidebar.radio("Mode", ["Replay", "Live"], horizontal=True)
@@ -187,7 +224,7 @@ if mode == "Live":
     config = st.sidebar.radio("Configuration", ["governed", "baseline"], horizontal=True)
     fault = st.sidebar.selectbox("Fault injection (induced omission, experiment only)", ["none", "FI-1", "FI-2"])
     if st.sidebar.button("Start investigation", disabled=not key_ok, type="primary"):
-        label = f"live-{config}-{time.strftime('%H%M%S')}"
+        label = f"live-demo-{config}-{time.strftime('%H%M%S')}"
         subprocess.Popen([str(REPO / ".venv/bin/mc"), "run", "--mode", config, "--arm", "live", "--label", label,
                           "--trigger", "11000", "--fault", fault, "--temperature", "0"], cwd=REPO,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
@@ -208,8 +245,13 @@ else:
         import os
         want = QP.get("bundle") or os.path.basename(os.environ.get("MC_REPLAY_BUNDLE", "").rstrip("/")) or "E1-governed"
         default = next((i for i, n in enumerate(names) if n == want), 0)
-        src = bundles[st.sidebar.selectbox("Recorded run (replay bundle)", range(len(names)), index=default,
+        if "bundle_sel" not in st.session_state:
+            st.session_state["bundle_sel"] = default
+        src = bundles[st.sidebar.selectbox("Recorded run (replay bundle)", range(len(names)), key="bundle_sel",
                                            format_func=lambda i: names[i])]
+        if QP.get("bundle") and QP["bundle"] != src.label:
+            st.query_params["bundle"] = src.label
+            QP["bundle"] = src.label
         v = verified(src.label, (REPLAYS / src.label / "manifest.json").stat().st_mtime)
         if v["ok"]:
             st.sidebar.success(f"Recorded run · artifacts verified ({v['files']} files, hashes match)")
@@ -230,7 +272,7 @@ if src is not None:
     else:
         upto = max(steps)
     if src.replay:
-        watch_replay(src.label, st.sidebar, "sb")
+        watch_replay(src.label, st.sidebar, "sidebar")
     comps_all = src.jl("compactions.jsonl")
     if comps_all:
         st.sidebar.caption("Compactions at request " + ", ".join(str(c["run_step"]) for c in comps_all))
@@ -565,7 +607,7 @@ def investigation(s: Source, upto: int):
 
 def render_investigation():
     if src is not None and src.replay:
-        watch_replay(src.label, st, "inv")
+        watch_replay(src.label, st, "investigation")
     if src is None:
         st.info("Select a run.")
     elif mode == "Live" and src.j("run.json", {}).get("outcome") == "running":
@@ -796,6 +838,65 @@ def render_compaction():
 
 
 # ------------------------------------------------------------------ Report
+def _find_record(obj, rid):
+    """The smallest dict inside a recorded tool result that carries rid as a value."""
+    if isinstance(obj, dict):
+        for v in obj.values():
+            hit = _find_record(v, rid)
+            if hit is not None:
+                return hit
+        if any(v == rid for v in obj.values()):
+            return obj
+    elif isinstance(obj, list):
+        for v in obj:
+            hit = _find_record(v, rid)
+            if hit is not None:
+                return hit
+    return None
+
+
+def record_retrieval(tools: list, rid: str):
+    """First recorded retrieval of a record id in this run: a direct fetch by id if any, else the first result
+    that contains it. Returns (line number in tools.jsonl, tool row, the record as returned)."""
+    data = [(n, t) for n, t in enumerate(tools, 1) if t.get("category") == "allowed"]   # retrieval tools only
+    for n, t in data:
+        if rid in json.dumps(t.get("args", {})):
+            rec = _find_record(t.get("result"), rid)
+            if rec is not None:
+                return n, t, rec
+    for n, t in data:
+        rec = _find_record(t.get("result"), rid)
+        if rec is not None:
+            return n, t, rec
+    return None
+
+
+def finding_evidence(s: Source, rep: dict):
+    """Beneath each finding: the records it cites, exactly as the tools returned them in this run."""
+    tools = s.jl("tools.jsonl")
+    _, events = s.main_events()
+    asserted, _ = gov_index(events)
+    st.caption("Open a finding to see the recorded evidence behind each record it cites: the tool call that first "
+               "retrieved it in this run, the record as returned (redacted, as recorded) and its Governor record.")
+    for i, f in enumerate(rep["findings"], 1):
+        with st.expander(md(f"Recorded evidence for this finding · {i}. {f['title'][:90]}")):
+            st.markdown(f"**Verdict** {f['verdict']} ({VERDICT_LABELS.get(f['verdict'], '')}) · "
+                        f"**amount** {f.get('amount_at_issue')} · **records cited** {', '.join(f['record_ids'])}")
+            for rid in f["record_ids"]:
+                hit = record_retrieval(tools, rid)
+                if not hit:
+                    st.markdown(f"`{rid}` · :red[not found in this run's recorded tool results]")
+                    continue
+                n, t, rec = hit
+                g = asserted.get(t["tool_call_id"])
+                flags = (g["policy_violations"] + g["advisory_flags"]) if g else []
+                st.markdown(f"`{rid}` · request {t['run_step']} · {TOOL} `{t['tool_name']}({json.dumps(t['args'])[:80]})` · "
+                            + (f"{GOV} recorded (event `{g['event_id'][:8]}…`)" + (f", flagged {', '.join(flags)}" if flags else "")
+                               if g else f"{GOV} record: not found")
+                            + f" · `tools.jsonl:{n}`")
+                st.json(rec, expanded=True)
+
+
 def render_report():
     if src is None:
         st.info("Select a run.")
@@ -819,6 +920,7 @@ def render_report():
                                         "amount": f.get("amount_at_issue"),
                                         "records": ", ".join(f["record_ids"]), "title": f["title"]}
                                        for f in rep["findings"]]), hide_index=True, use_container_width=True)
+            finding_evidence(src, rep)
             with st.expander("Answer key (ground truth)"):
                 for t, v in gt["threads"].items():
                     st.markdown(f"**{t}** {v['verdict']} · {md(v['conclusion'])}")
@@ -900,6 +1002,49 @@ def overview(srcs):
     st.divider()
 
 
+FEATURED = (("E1-baseline", "Baseline architecture"), ("E1-governed", "Governed architecture"))
+
+
+def e1_observations(r: dict) -> list:
+    """Recorded facts for one run, read from its results.json."""
+    c = r["compactions"][0] if r["compactions"] else None
+    auth = r["authorization"]
+    out = []
+    if c:
+        out.append(f"First compaction ({c['compaction_id']}): key facts {len(c['cf_present'])}/{len(c['cf_exposed'])}"
+                   + (f", missing {', '.join(c['cf_missing'])}" if c["cf_missing"] else "")
+                   + "; mission terms " + ("all present" if not c["kernel_terms_missing"]
+                                           else "missing: " + ", ".join(c["kernel_terms_missing"])))
+        out.append(f"Same-request reduction: {', '.join(str(x['counted']['reduction_pct']) + '%' for x in r['compactions'] if x.get('counted'))}"
+                   f" ({len(r['compactions'])} compaction{'s' if len(r['compactions']) != 1 else ''})")
+    out.append(f"Prohibited attempts: {len(auth['prohibited_dispatches'])}; Governor flagged {auth['governor_flagged']}; "
+               f"simulated effects {auth['simulated_effects']}; guard denials {auth['guard_denials']}")
+    out.append(f"Task score: {r['correctness']['score']}/5")
+    return out
+
+
+def featured_comparison(srcs):
+    """The two recorded session demonstrations, playable side by side without leaving Comparison."""
+    by = {s.label: s for s in srcs}
+    if not all(lab in by and replay_info(lab) for lab, _ in FEATURED):
+        return
+    st.header("Recorded session demonstrations (E1)")
+    st.caption("Two independent recordings of the same mission, one run each, each with its own controls. Pacing is "
+               "for viewing and not to scale; the two timelines do not align. These observations come from two single "
+               "runs and do not establish general superiority: the full results, repeat runs and limitations follow below.")
+    cols = st.columns(2)
+    for col, (lab, arch) in zip(cols, FEATURED):
+        info = replay_info(lab)
+        with col:
+            st.markdown(f"**{arch}** · recorded run `{lab}`")
+            st.video((info["dir"] / info["render"]["video"]).read_bytes())
+            for line in e1_observations(by[lab].j("results.json")):
+                st.markdown(f"- {md(line)}")
+            st.button(f"Open replay page · {lab}", key=f"open-{lab}",
+                      on_click=_navigate, kwargs={"screen": "replay", "bundle": lab, "origin": "comparison"})
+    st.divider()
+
+
 def render_comparison():
     srcs = replay_sources() if mode == "Replay" else live_sources()
     rows = []
@@ -927,13 +1072,15 @@ def render_comparison():
     if not rows:
         st.info("No experimental runs available in this mode.")
     else:
+        if mode == "Replay":
+            featured_comparison(srcs)
         overview(srcs)
         if mode == "Replay":
-            st.subheader("Watch Replay")
-            st.caption("Visual recreations of recorded agent sessions, rendered from the record (no generated footage).")
-            cols = st.columns(2)
-            for i, r in enumerate(rows):
-                watch_replay(r["run"], cols[i % 2], f"cmp-{r['run']}")
+            others = [r["run"] for r in rows if not replay_info(r["run"])]
+            if others:
+                with st.expander(f"Other runs ({len(others)}): replay not yet generated"):
+                    for r in others:
+                        st.caption(f"▶ Watch Replay · {r}: Replay not yet generated.")
         df = pd.DataFrame(rows)
         task_cols = ["run", "arm", "architecture", "score /5", "R1", "R2", "R3", "R4", "R5", "compactions",
                      "reduction % (same request)", "facts missing after compaction", "Kernel terms missing"]
@@ -955,11 +1102,14 @@ def render_comparison():
                    "did not meet the preregistered A2 ratio or the floor check (see README).")
 
 
-if QP.get("screen") and src is not None and src.replay:
+if QP.get("screen") and QP.get("screen") != "replay" and src is not None:
+    return_bar(src.label)
+if QP.get("screen") and QP.get("screen") != "replay" and src is not None and src.replay:
     _v = verified(src.label, (REPLAYS / src.label / "manifest.json").stat().st_mtime)
     st.success(f"Replay of recorded run **{src.label}** · artifacts verified ({_v['files']} files, hashes match)"
                if _v["ok"] else f"Bundle {src.label} failed verification")
 
+_scroll_top()
 VIEWS = {"mission": render_mission, "investigation": render_investigation, "compaction": render_compaction,
          "report": render_report, "comparison": render_comparison, "replay": render_replay}
 if QP.get("screen") in VIEWS:
