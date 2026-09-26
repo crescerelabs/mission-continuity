@@ -25,7 +25,7 @@ from typing import Dict, List, Optional
 
 from mission_continuity.bundle import verify as verify_bundle
 from mission_continuity.compaction import CF_TESTS, KERNEL_TERMS, render_messages
-from mission_continuity.paths import REPLAYS, REPO
+from mission_continuity.paths import REPLAYS, REPO, RUNS, TRACE_DIR
 
 W, H, FPS = 1280, 720, 12
 TIMELINE_VERSION = 2
@@ -67,25 +67,86 @@ def _key_arg(args) -> str:
     return ""
 
 
+# ------------------------------------------------------------------ sources
+class BundleSource:
+    """A recorded experiment run: a hash-verified replay bundle under replays/<label>."""
+    kind = "recorded_experiment"
+
+    def __init__(self, label: str):
+        self.root = REPLAYS / label
+        if not verify_bundle(self.root)["ok"]:
+            raise RuntimeError(f"bundle {label} failed verification")
+        self.manifest = json.loads((self.root / "manifest.json").read_text())
+
+    def path(self, rel: str) -> Path:
+        return self.root / rel
+
+    def sha(self, rel: str):
+        return self.manifest["files"].get(rel)
+
+    def fingerprint(self) -> str:
+        return hashlib.sha256((self.root / "manifest.json").read_bytes()).hexdigest()
+
+    def describe(self) -> str:
+        return f"replays/{self.root.name}"
+
+
+class LiveRunSource:
+    """A completed live investigation: its run records under var/runs/<label> and its Governor traces.
+    Not part of the experiment. Files are hashed when the replay is generated and re-checked on verify."""
+    kind = "completed_live_investigation"
+
+    def __init__(self, label: str):
+        self.run_dir = RUNS / label
+        meta = json.loads((self.run_dir / "run.json").read_text()) if (self.run_dir / "run.json").exists() else {}
+        if meta.get("arm") != "live" or meta.get("outcome") != "completed":
+            raise RuntimeError(f"{label} is not a completed live investigation")
+        if not (self.run_dir / "results.json").exists():
+            raise RuntimeError(f"{label} has not been evaluated yet (mc evaluate {label})")
+
+    def path(self, rel: str) -> Path:
+        if rel.startswith("run/"):
+            return self.run_dir / rel[4:]
+        if rel.startswith("traces/"):
+            return TRACE_DIR / rel[7:]
+        raise ValueError(rel)
+
+    def sha(self, rel: str):
+        p = self.path(rel)
+        return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
+
+    def fingerprint(self) -> str:
+        meta = json.loads((self.run_dir / "run.json").read_text())
+        files = sorted(f"run/{p.relative_to(self.run_dir)}" for p in self.run_dir.rglob("*")
+                       if p.is_file() and p.name != "runner.log")
+        files += [f"traces/{sid}.jsonl" for sid in meta.get("governor_session_ids", [])]
+        return hashlib.sha256(json.dumps({f: self.sha(f) for f in files}, sort_keys=True).encode()).hexdigest()
+
+    def describe(self) -> str:
+        return f"var/runs/{self.run_dir.name}"
+
+
+def source_for(label: str, live: bool = False):
+    return LiveRunSource(label) if live else BundleSource(label)
+
+
 # ------------------------------------------------------------------ timeline
-def build_timeline(label: str, liquid: Optional[dict] = None) -> dict:
-    bundle = REPLAYS / label
-    if not verify_bundle(bundle)["ok"]:
-        raise RuntimeError(f"bundle {label} failed verification")
-    man = json.loads((bundle / "manifest.json").read_text())
-    run = json.loads((bundle / "run" / "run.json").read_text())
-    results = json.loads((bundle / "run" / "results.json").read_text())
+def build_timeline(label: str, liquid: Optional[dict] = None, live: bool = False) -> dict:
+    srcobj = source_for(label, live)
+    P = srcobj.path
+    run = json.loads(P("run/run.json").read_text())
+    results = json.loads(P("run/results.json").read_text())
     start, mode = run["started_at"], run["mode"]
-    req_rows = _rows(bundle / "run" / "requests.jsonl")
+    req_rows = _rows(P("run/requests.jsonl"))
     sid = req_rows[0][2]["governor_session_id"]
     trace_rel = f"traces/{sid}.jsonl"
-    trace = _rows(bundle / trace_rel)
-    tools = _rows(bundle / "run" / "tools.jsonl")
-    comps = _rows(bundle / "run" / "compactions.jsonl")
-    effects = _rows(bundle / "run" / "effects.jsonl")
+    trace = _rows(P(trace_rel))
+    tools = _rows(P("run/tools.jsonl"))
+    comps = _rows(P("run/compactions.jsonl"))
+    effects = _rows(P("run/effects.jsonl"))
 
     def src(rel, line=None, text=None, **ids):
-        d = {"file": rel, "file_sha256": man["files"].get(rel)}
+        d = {"file": rel, "file_sha256": srcobj.sha(rel)}
         if line is not None:
             d.update({"line": line, "row_sha256": _sha(text)})
         d.update({k: v for k, v in ids.items() if v is not None})
@@ -107,7 +168,7 @@ def build_timeline(label: str, liquid: Optional[dict] = None) -> dict:
     if comps:
         from pydantic_ai.messages import ModelMessagesTypeAdapter
         arch_rel = f"run/{comps[0][2]['archive_ref']}"
-        msgs = ModelMessagesTypeAdapter.validate_json((bundle / arch_rel).read_bytes())
+        msgs = ModelMessagesTypeAdapter.validate_json(P(arch_rel).read_bytes())
         first_text = render_messages(msgs[:1])
         t = first_text.lower()
         first_terms = [k for k in KERNEL_TERMS if k.lower() in t]
@@ -267,14 +328,19 @@ def build_timeline(label: str, liquid: Optional[dict] = None) -> dict:
 
     return {"version": TIMELINE_VERSION, "label": label, "mode": mode, "started_at": start,
             "n_requests": max_step, "trigger": run.get("trigger_input_tokens"),
-            "bundle_manifest_sha256": hashlib.sha256((bundle / "manifest.json").read_bytes()).hexdigest(),
-            "label_text": LABEL, "events": events}
+            **({"source_kind": srcobj.kind, "source_root": srcobj.describe()} if live else {}),
+            "bundle_manifest_sha256": srcobj.fingerprint(),
+            "label_text": LABEL if not live else LABEL + " · LIVE RUN, NOT PART OF THE EXPERIMENT", "events": events}
 
 
 # ------------------------------------------------------------------ rendering
 C = {"bg": (8, 11, 9), "panel": (16, 22, 18), "line": (44, 58, 48), "amber": (255, 176, 0), "green": (61, 220, 132),
      "red": (255, 77, 77), "dim": (110, 118, 110), "text": (226, 224, 214), "blue": (120, 170, 255),
      "epi": (20, 24, 38), "cyan": (90, 210, 220)}
+
+
+def _kind_word(tl) -> str:
+    return "LIVE INVESTIGATION" if tl.get("source_kind") == "completed_live_investigation" else "RECORDED SESSION"
 
 
 def _fonts():
@@ -377,7 +443,7 @@ def _frame(st: State, F, tick: int, ev: dict, p: float):
     tl = st.tl
     # status bar
     d.rectangle([0, 0, W, 30], fill=(0, 0, 0))
-    d.text((12, 7), f"MISSION CONTINUITY ▸ RECORDED SESSION {tl['label'].upper()} ▸ {tl['mode'].upper()}",
+    d.text((12, 7), f"MISSION CONTINUITY ▸ {_kind_word(tl)} {tl['label'].upper()} ▸ {tl['mode'].upper()}",
            font=F[14], fill=C["amber"])
     live = "●" if (tick // 6) % 2 == 0 else "○"
     right = f"REQ {st.step:02d}/{tl['n_requests']:02d}  {_offset(st.ts, tl['started_at'])}  {st.ts[11:19]}Z  {live} REPLAY"
@@ -533,7 +599,7 @@ def _card(tl, F, title: str, lines: List[str], epilogue: bool = False, rows=None
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, W, 30], fill=(0, 0, 0))
     hdr = ("EXPLORATORY · OFFLINE · NOT PART OF THE RECORDED SESSION" if epilogue
-           else f"MISSION CONTINUITY ▸ RECORDED SESSION {tl['label'].upper()} ▸ {tl['mode'].upper()}")
+           else f"MISSION CONTINUITY ▸ {_kind_word(tl)} {tl['label'].upper()} ▸ {tl['mode'].upper()}")
     d.text((12, 7), hdr, font=F[14], fill=C["blue"] if epilogue else C["amber"])
     if not epilogue:
         d.rectangle([0, 30, W, 50], fill=(20, 16, 4))
@@ -562,11 +628,15 @@ def frames(tl: dict):
     F = _fonts()
     st = State(tl)
     tick = 0
+    live = tl.get("source_kind") == "completed_live_investigation"
     title = [f"Architecture: {tl['mode']}. {tl['n_requests']} model requests, recorded {tl['started_at']}.",
-             "Every event, number and time on screen is read from the hash-verified replay bundle and its Governor "
-             "trace. Pacing is for viewing and not to scale; the clock shows recorded time.",
+             ("Every event, number and time on screen is read from this completed live investigation's run records "
+              "and Governor trace, hashed when the replay was generated. It is not part of the experiment."
+              if live else
+              "Every event, number and time on screen is read from the hash-verified replay bundle and its Governor "
+              "trace.") + " Pacing is for viewing and not to scale; the clock shows recorded time.",
              "No footage is generated. This is not a screen recording."]
-    img = _card(tl, F, "RECORDED AGENT SESSION REPLAY", title)
+    img = _card(tl, F, "LIVE INVESTIGATION REPLAY" if live else "RECORDED AGENT SESSION REPLAY", title)
     for _ in range(int(PACE["title"] * FPS)):
         yield img, 0
     for ev in tl["events"]:

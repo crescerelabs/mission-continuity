@@ -71,3 +71,52 @@ def test_governed_timeline_uses_only_its_own_events():
     assert "tool_flag" not in kinds and "effect" not in kinds and "liquid" not in kinds
     assert kinds.count("compaction") == 2
     assert next(ev for ev in g["events"] if ev["kind"] == "mission")["data"]["kernel_in_instructions"]
+
+
+def test_live_replay_is_generic_and_writes_only_under_var(tmp_path, monkeypatch):
+    """Any completed live investigation gets its own replay from its own records, under var/reconstructions only."""
+    import hashlib
+    import json
+    import shutil
+    from mission_continuity import paths, reconstruct, session_replay
+    from mission_continuity.paths import REPLAYS
+    runs, traces, out = tmp_path / "runs", tmp_path / "traces", tmp_path / "recon"
+    label = "live-demo-governed-000000"
+    shutil.copytree(REPLAYS / "E1-governed" / "run", runs / label)          # a stand-in completed live run
+    meta = json.loads((runs / label / "run.json").read_text())
+    meta.update(arm="live", label=label)
+    (runs / label / "run.json").write_text(json.dumps(meta))
+    traces.mkdir()
+    for t in (REPLAYS / "E1-governed" / "traces").glob("*.jsonl"):
+        shutil.copy(t, traces / t.name)
+    monkeypatch.setattr(paths, "RUNS", runs)
+    monkeypatch.setattr(session_replay, "RUNS", runs)
+    monkeypatch.setattr(session_replay, "TRACE_DIR", traces)
+    monkeypatch.setattr(reconstruct, "LIVE_ROOT", out)
+    monkeypatch.setattr(session_replay, "render", lambda tl, video: (video.write_bytes(b"x"), {
+        "frames": 1, "fps": 12, "duration_s": 0.1, "event_spans_s": {}, "_stills": {}})[1])
+    published = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (paths.REPO / "reconstructions").rglob("*") if p.is_file()}
+
+    assert reconstruct.is_completed_live(label)
+    r = reconstruct.render_live(label)
+    assert (out / label / "replay.mp4").exists() and r["kind"] == "completed_live_investigation_replay"
+    tl = json.loads((out / label / "timeline.json").read_text())
+    assert tl["source_kind"] == "completed_live_investigation" and tl["label"] == label
+    kinds = [e["kind"] for e in tl["events"]]
+    assert kinds[0] == "mission" and kinds[-2:] == ["outcome", "takeaway"] and "liquid" not in kinds
+    assert reconstruct.verify_live(label)["ok"]
+    assert reconstruct.available_live(label)["live"]
+    # published replays untouched
+    assert published == {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (paths.REPO / "reconstructions").rglob("*") if p.is_file()}
+
+
+def test_live_replay_refuses_runs_that_are_not_completed_live(tmp_path, monkeypatch):
+    import json
+    import pytest
+    from mission_continuity import paths, reconstruct
+    runs = tmp_path / "runs"; (runs / "x").mkdir(parents=True)
+    (runs / "x" / "run.json").write_text(json.dumps({"arm": "live", "outcome": "running"}))
+    monkeypatch.setattr(paths, "RUNS", runs)
+    assert not reconstruct.is_completed_live("x")
+    with pytest.raises(RuntimeError):
+        reconstruct.render_live("x")

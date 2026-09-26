@@ -411,6 +411,85 @@ def verify(label: str, placeholder: bool = False) -> dict:
     return {"label": label, "ok": all(checks.values()), "checks": checks}
 
 
+# ------------------------------------------------------------------ completed live investigations
+LIVE_ROOT = VAR / "reconstructions"   # gitignored; never reconstructions/ or replays/
+
+
+def is_completed_live(label: str) -> bool:
+    from mission_continuity.paths import RUNS
+    p = RUNS / label / "run.json"
+    if not p.exists():
+        return False
+    meta = json.loads(p.read_text())
+    return meta.get("arm") == "live" and meta.get("outcome") == "completed"
+
+
+def render_live(label: str) -> dict:
+    """Replay of one completed live investigation, from its own run records and Governor trace.
+    Evaluates it first if needed (local, deterministic). Writes only var/reconstructions/<label>/."""
+    from mission_continuity import session_replay
+    from mission_continuity.paths import RUNS
+    if not is_completed_live(label):
+        raise RuntimeError(f"{label} is not a completed live investigation")
+    if not (RUNS / label / "results.json").exists():
+        from mission_continuity.evaluate import evaluate
+        evaluate(label)
+    tl = session_replay.build_timeline(label, None, live=True)
+    if leak_check(tl):
+        raise RuntimeError("refused: personal-data value(s) in the timeline")
+    out_dir = LIVE_ROOT / label
+    out_dir.mkdir(parents=True, exist_ok=True)
+    video = out_dir / "replay.mp4"
+    r = session_replay.render(tl, video)
+    r.pop("_stills")
+    (out_dir / "timeline.json").write_text(json.dumps(tl, indent=1, ensure_ascii=False))
+    manifest = {"label": label, "version": VERSION, "kind": "completed_live_investigation_replay",
+                "footage": "rendered from the record (no generated footage)", "source_root": tl["source_root"],
+                "source_fingerprint": tl["bundle_manifest_sha256"],
+                "rendered_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "timeline_sha256": _sha_file(out_dir / "timeline.json"), **r,
+                "video": "replay.mp4", "video_sha256": _sha_file(video), "video_bytes": video.stat().st_size}
+    (out_dir / "render.json").write_text(json.dumps(manifest, indent=1))
+    rel = out_dir.relative_to(REPO) if out_dir.is_relative_to(REPO) else out_dir
+    return {"out_dir": str(rel), **manifest}
+
+
+def verify_live(label: str) -> dict:
+    from mission_continuity import session_replay
+    out_dir = LIVE_ROOT / label
+    stored = json.loads((out_dir / "timeline.json").read_text())
+    src = session_replay.LiveRunSource(label)
+    checks = {"completed_live_investigation": is_completed_live(label)}
+    rebuilt = session_replay.build_timeline(label, None, live=True)
+    checks["timeline_rebuilt_from_run_records_matches"] = stored == json.loads(json.dumps(rebuilt, ensure_ascii=False))
+    ok_rows = True
+    for ev in stored["events"]:
+        for s_ in ev["sources"]:
+            p = src.path(s_["file"])
+            if "row_sha256" in s_:
+                ok_rows &= _sha_text(_lines(p)[s_["line"] - 1]) == s_["row_sha256"]
+            if s_.get("file_sha256"):
+                ok_rows &= _sha_file(p) == s_["file_sha256"]
+    checks["every_event_source_row_and_file_matches"] = ok_rows
+    checks["every_event_has_a_source"] = all(ev["sources"] for ev in stored["events"])
+    rj = json.loads((out_dir / "render.json").read_text())
+    checks["timeline_hash_matches_render"] = _sha_file(out_dir / "timeline.json") == rj["timeline_sha256"]
+    checks["video_hash_matches"] = _sha_file(out_dir / rj["video"]) == rj["video_sha256"]
+    checks["no_personal_data"] = not leak_check(stored)
+    return {"label": label, "ok": all(checks.values()), "checks": checks}
+
+
+def available_live(label: str) -> Optional[dict]:
+    d = LIVE_ROOT / label
+    if not ((d / "render.json").exists() and (d / "replay.mp4").exists() and (d / "timeline.json").exists()):
+        return None
+    rj = json.loads((d / "render.json").read_text())
+    if rj.get("kind") != "completed_live_investigation_replay":
+        return None
+    return {"dir": d, "placeholder": False, "live": True, "render": rj,
+            "timeline": json.loads((d / "timeline.json").read_text())}
+
+
 def available(label: str, allow_placeholder: bool = False) -> Optional[dict]:
     """For the console: the reconstruction of a run, if one exists.
 

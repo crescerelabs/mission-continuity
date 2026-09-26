@@ -126,8 +126,15 @@ def replay_url(label: str) -> str:
     return f"?screen=replay&bundle={label}"
 
 
+LIVE_REPLAY_LABEL = ("Visual recreation of a completed live investigation, rendered deterministically from its own run "
+                     "records and Governor trace (hashed when the replay was generated). It is not part of the "
+                     "experiment, contains no generated footage and is not a screen recording. Pacing is for viewing "
+                     "and not to scale; the clock shows recorded time.")
+
+
 def replay_info(label: str):
-    return reconstruct.available(label, allow_placeholder=REPLAY_PREVIEW)
+    return (reconstruct.available(label, allow_placeholder=REPLAY_PREVIEW)
+            or (reconstruct.available_live(label) if label else None))
 
 
 ORIGIN_LABEL = {"mission": "Mission", "investigation": "Investigation", "comparison": "Comparison"}
@@ -148,6 +155,12 @@ def watch_replay(label: str, where, key: str):
     if replay_info(label):
         where.button(f"▶ Watch Replay · {label}", key=f"wr-{key}-{label}", type="primary",
                      on_click=_navigate, kwargs={"screen": "replay", "bundle": label, "origin": key})
+    elif reconstruct.is_completed_live(label):
+        # Every completed live investigation can generate its own replay (local render; no model or BFL calls).
+        if where.button(f"🎬 Generate Replay · {label}", key=f"gen-{key}-{label}", type="primary"):
+            with st.spinner(f"Rendering the replay of {label} from its run records and Governor trace…"):
+                reconstruct.render_live(label)
+            st.rerun()
     else:
         where.caption(f"▶ Watch Replay · {label}: Replay not yet generated.")
 
@@ -174,14 +187,15 @@ def return_bar(label: str, origin=None):
 
 
 @st.cache_data(show_spinner=False)
-def _replay_verified(label: str, mtime: float, placeholder: bool) -> dict:
-    return reconstruct.verify(label, placeholder=placeholder)
+def _replay_verified(label: str, mtime: float, placeholder: bool, live: bool = False) -> dict:
+    return reconstruct.verify_live(label) if live else reconstruct.verify(label, placeholder=placeholder)
 
 
 def render_replay():
     label = QP.get("bundle") or (src.label if src is not None else None)
     return_bar(label, QP.get("origin"))
-    st.markdown(f"**Watch Replay · {label}** · recorded agent session")
+    st.markdown(f"**Watch Replay · {label}** · " + ("completed live investigation (not part of the experiment)"
+                                                    if reconstruct.is_completed_live(label or "") else "recorded agent session"))
     info = replay_info(label) if label else None
     if not info:
         st.info("Replay not yet generated.")
@@ -191,11 +205,17 @@ def render_replay():
     rj, tl = info["render"], info["timeline"]
     player, _ = st.columns([5, 1])   # keeps the whole 16:9 player inside a ~860 px tall recording viewport
     player.video((info["dir"] / rj["video"]).read_bytes())
-    v = _replay_verified(label, (info["dir"] / "render.json").stat().st_mtime, info["placeholder"])
-    bv = verified(label, (REPLAYS / label / "manifest.json").stat().st_mtime)
-    st.caption(REPLAY_LABEL + f" · {rj['duration_s']} s · {len(tl['events'])} recorded events · bundle verified "
-               f"({bv['files']} files, hashes match) · replay verification: **{'PASS' if v['ok'] else 'FAIL'}** "
-               f"· video SHA-256 {rj['video_sha256'][:12]}…")
+    live = bool(info.get("live"))
+    v = _replay_verified(label, (info["dir"] / "render.json").stat().st_mtime, info["placeholder"], live)
+    if live:
+        st.caption(LIVE_REPLAY_LABEL + f" · {rj['duration_s']} s · {len(tl['events'])} recorded events · source "
+                   f"{rj['source_root']} · replay verification: **{'PASS' if v['ok'] else 'FAIL'}** "
+                   f"· video SHA-256 {rj['video_sha256'][:12]}…")
+    else:
+        bv = verified(label, (REPLAYS / label / "manifest.json").stat().st_mtime)
+        st.caption(REPLAY_LABEL + f" · {rj['duration_s']} s · {len(tl['events'])} recorded events · bundle verified "
+                   f"({bv['files']} files, hashes match) · replay verification: **{'PASS' if v['ok'] else 'FAIL'}** "
+                   f"· video SHA-256 {rj['video_sha256'][:12]}…")
     st.button("Open this run's Investigation timeline", key="nav-inv",
               on_click=_navigate, kwargs={"screen": "investigation", "bundle": label})
     st.subheader("Key events and their source evidence")
@@ -303,7 +323,7 @@ if src is not None:
         upto = st.sidebar.slider("Replay up to model request", min(steps), max(steps), min(max(qup, min(steps)), max(steps)))
     else:
         upto = max(steps)
-    if src.replay:
+    if src.replay or reconstruct.is_completed_live(src.label):
         watch_replay(src.label, st.sidebar, "sidebar")
     comps_all = src.jl("compactions.jsonl")
     if comps_all:
@@ -360,7 +380,7 @@ VERDICT_LABELS = {"ACTUAL_ERROR": "actual billing error", "APPARENT_NOT_ERROR": 
 # ------------------------------------------------------------------ Mission
 def render_mission():
     header()
-    if src is not None and src.replay:
+    if src is not None and (src.replay or reconstruct.is_completed_live(src.label)):
         watch_replay(src.label, st, "mission")
     roles_box()
     st.caption(LIMITATIONS)
@@ -638,7 +658,7 @@ def investigation(s: Source, upto: int):
 
 
 def render_investigation():
-    if src is not None and src.replay:
+    if src is not None and (src.replay or reconstruct.is_completed_live(src.label)):
         watch_replay(src.label, st, "investigation")
     if src is None:
         st.info("Select a run.")
@@ -1141,7 +1161,21 @@ if QP.get("screen") and QP.get("screen") != "replay" and src is not None and src
     st.success(f"Replay of recorded run **{src.label}** · artifacts verified ({_v['files']} files, hashes match)"
                if _v["ok"] else f"Bundle {src.label} failed verification")
 
+def live_completion_panel():
+    """Live mode: once the current investigation completes, its replay is one click away."""
+    if mode == "Live" and src is not None and not QP.get("screen") and reconstruct.is_completed_live(src.label):
+        with st.container(border=True):
+            meta = src.j("run.json", {})
+            res = src.j("results.json")
+            st.markdown(f"✅ **Investigation complete** · `{src.label}` · {meta.get('mode')} · "
+                        f"{meta.get('wall_seconds')} s" + (f" · task score {res['correctness']['score']}/5" if res else ""))
+            watch_replay(src.label, st, "livepanel")
+            st.caption("The replay is rendered locally from this run's own records and Governor trace (no model or "
+                       "generated footage), saved under var/reconstructions/, and is not part of the experiment.")
+
+
 _scroll_top()
+live_completion_panel()
 VIEWS = {"mission": render_mission, "investigation": render_investigation, "compaction": render_compaction,
          "report": render_report, "comparison": render_comparison, "replay": render_replay}
 if QP.get("screen") in VIEWS:

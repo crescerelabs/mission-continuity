@@ -237,6 +237,17 @@ def _cmd_rawtree(args) -> int:
 
 def _cmd_reconstruct(args) -> int:
     from mission_continuity import reconstruct
+    if args.action == "build" and args.live:
+        r = reconstruct.render_live(args.label)
+        print(json.dumps({k: r[k] for k in ("out_dir", "kind", "source_root", "frames", "duration_s", "video_sha256",
+                                            "video_bytes")}, indent=1))
+        return 0
+    if args.action == "verify" and args.live:
+        r = reconstruct.verify_live(args.label)
+        for k, v in r["checks"].items():
+            print(f"{'PASS' if v else 'FAIL'} {k}")
+        print("LIVE REPLAY", "PASS" if r["ok"] else "FAIL")
+        return 0 if r["ok"] else 4
     if args.action == "build":
         r = reconstruct.render(args.label, placeholder=args.placeholder)
         print(json.dumps({k: r[k] for k in ("out_dir", "kind", "footage", "frames", "fps", "duration_s", "video_sha256",
@@ -391,6 +402,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("label", nargs="?", default="E1-baseline")
     p.add_argument("scene", nargs="?")
     p.add_argument("--placeholder", action="store_true", help="solid backgrounds; output under var/")
+    p.add_argument("--live", action="store_true", help="completed live investigation (var/runs); output under var/reconstructions")
     p.add_argument("--reference", help="accepted scene whose first frame opens this draft (style/continuity)")
     p.set_defaults(func=_cmd_reconstruct)
 
